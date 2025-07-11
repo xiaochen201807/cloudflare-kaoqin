@@ -86,7 +86,7 @@ dist
 
 # Gatsby 文件
 .cache/
-public
+# public - 注释掉，Cloudflare Pages 需要 public 目录
 
 # Vuepress 构建输出
 .vuepress/dist
