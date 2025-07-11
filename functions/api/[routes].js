@@ -179,6 +179,16 @@ export async function onRequest(context) {
     return handleDebug(context, session);
   }
 
+  // 处理地理编码API（获取地址信息）
+  if (path === "/api/geocode" && request.method === "GET") {
+    return handleGeocode(context);
+  }
+
+  // 处理签到API（兼容旧版本）
+  if (path === "/api/checkin" && request.method === "POST") {
+    return handleSubmitLocation(context, session);
+  }
+
   // 如果API路径不存在，返回404
   return createErrorResponse("API endpoint not found", 404);
 }
@@ -657,11 +667,83 @@ function handleHealthCheck(context) {
   return createSuccessResponse(healthStatus, statusCode);
 }
 
+// 处理地理编码API（获取地址信息）
+async function handleGeocode(context) {
+  const { request, env } = context;
+  const url = new URL(request.url);
+
+  // 获取查询参数
+  const lat = url.searchParams.get('lat');
+  const lng = url.searchParams.get('lng');
+
+  if (!lat || !lng) {
+    return createErrorResponse("缺少必需的参数: lat 和 lng", 400);
+  }
+
+  // 验证坐标格式
+  const latitude = parseFloat(lat);
+  const longitude = parseFloat(lng);
+
+  if (isNaN(latitude) || isNaN(longitude)) {
+    return createErrorResponse("无效的坐标格式", 400);
+  }
+
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return createErrorResponse("坐标超出有效范围", 400);
+  }
+
+  try {
+    // 使用高德地图逆地理编码API
+    const amapKey = env.AMAP_KEY || "79a85def4762b3e9024547ee3b8b0e38";
+    const amapUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${amapKey}&location=${longitude},${latitude}&poitype=&radius=1000&extensions=base&batch=false&roadlevel=0`;
+
+    const response = await fetch(amapUrl);
+    const data = await response.json();
+
+    if (data.status === "1" && data.regeocode) {
+      // 成功获取地址信息
+      const address = data.regeocode.formatted_address ||
+                     `${data.regeocode.addressComponent?.province || ''}${data.regeocode.addressComponent?.city || ''}${data.regeocode.addressComponent?.district || ''}`;
+
+      return createSuccessResponse({
+        address: address,
+        detail: data.regeocode.addressComponent,
+        location: {
+          latitude: latitude,
+          longitude: longitude
+        }
+      });
+    } else {
+      // 高德API返回错误
+      console.error("高德地图API错误:", data);
+      return createSuccessResponse({
+        address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+        location: {
+          latitude: latitude,
+          longitude: longitude
+        },
+        error: "无法获取详细地址信息"
+      });
+    }
+  } catch (error) {
+    console.error("地理编码请求失败:", error);
+    // 即使API失败，也返回坐标信息
+    return createSuccessResponse({
+      address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+      location: {
+        latitude: latitude,
+        longitude: longitude
+      },
+      error: "地理编码服务暂时不可用"
+    });
+  }
+}
+
 // 处理调试信息
 function handleDebug(context, session) {
   const { request, env } = context;
   const url = new URL(request.url);
-  
+
   // 获取所有cookie
   const cookieHeader = request.headers.get("Cookie") || "";
   const cookies = Object.fromEntries(
@@ -670,7 +752,7 @@ function handleDebug(context, session) {
       return [name, value.join("=")];
     })
   );
-  
+
   // 获取环境变量配置状态（不显示实际值，只显示是否已设置）
   const envStatus = {
     GITHUB_CLIENT_ID: !!env.GITHUB_CLIENT_ID,
@@ -684,7 +766,7 @@ function handleDebug(context, session) {
     JWT_PRIVATE_KEY: !!env.JWT_PRIVATE_KEY,
     JWT_PUBLIC_KEY: !!env.JWT_PUBLIC_KEY
   };
-  
+
   // 创建调试信息
   const debugInfo = {
     timestamp: new Date().toISOString(),
@@ -706,7 +788,7 @@ function handleDebug(context, session) {
     } : null,
     environment: envStatus
   };
-  
+
   // 返回调试信息
   return new Response(
     JSON.stringify(debugInfo, null, 2),
