@@ -237,7 +237,7 @@ function handleUserInfo(context, session) {
 // 处理配置API
 function handleConfig(context) {
   const { env } = context;
-  
+
   // 返回前端需要的配置信息
   return new Response(
     JSON.stringify({
@@ -249,7 +249,7 @@ function handleConfig(context) {
         }
       }
     }),
-    { 
+    {
       status: 200,
       headers: { "Content-Type": "application/json" }
     }
@@ -259,27 +259,27 @@ function handleConfig(context) {
 // 处理提交位置数据
 async function handleSubmitLocation(context, session) {
   const { request, env } = context;
-  
+
   try {
     const requestData = await request.json();
     let data = { ...requestData };
-    
+
     // 添加用户信息到数据中
     if (session) {
       data.userId = session.user.id;
       data.username = session.user.login;
     }
-    
+
     // 选择合适的API端点
     let n8nEndpoint = env.N8N_API_ENDPOINT;
-    
+
     // 如果是确认打卡模式，使用确认打卡API端点
     if (data.confirmed === true && data.confirmData) {
       n8nEndpoint = env.N8N_API_CONFIRM_ENDPOINT;
       // 将确认数据合并到请求中
       data = { ...data, ...data.confirmData };
     }
-    
+
     // 生成JWT令牌用于认证
     const jwtAlgorithm = env.JWT_ALGORITHM || "HS256";
     const jwtPayload = {
@@ -287,9 +287,9 @@ async function handleSubmitLocation(context, session) {
       exp: Math.floor(Date.now() / 1000) + 60 * 5, // 5分钟过期
       data: data
     };
-    
+
     let jwt;
-    
+
     if (jwtAlgorithm === "RS256") {
       // 使用RS256算法和私钥签名
       try {
@@ -297,10 +297,10 @@ async function handleSubmitLocation(context, session) {
         if (!privateKey) {
           throw new Error("RS256算法需要配置JWT_PRIVATE_KEY");
         }
-        
+
         // 导入私钥
         const privateKeyImported = await jose.importPKCS8(privateKey, jwtAlgorithm);
-        
+
         // 使用jose库创建JWT
         jwt = await new jose.SignJWT(jwtPayload)
           .setProtectedHeader({ alg: jwtAlgorithm })
@@ -309,7 +309,7 @@ async function handleSubmitLocation(context, session) {
         console.error("RS256签名失败:", error);
         return new Response(
           JSON.stringify({ success: false, message: "令牌生成失败: " + error.message }),
-          { 
+          {
             status: 500,
             headers: { "Content-Type": "application/json" }
           }
@@ -341,7 +341,7 @@ async function handleSubmitLocation(context, session) {
         .setProtectedHeader({ alg: 'HS256' })
         .sign(secret);
     }
-    
+
     // 提交数据到n8n
     const n8nResponse = await fetch(n8nEndpoint, {
       method: "POST",
@@ -351,11 +351,11 @@ async function handleSubmitLocation(context, session) {
       },
       body: JSON.stringify(data)
     });
-    
+
     // 处理n8n响应
     const responseText = await n8nResponse.text();
     let n8nResult;
-    
+
     try {
       // 尝试将文本解析为JSON
       n8nResult = JSON.parse(responseText);
@@ -363,43 +363,43 @@ async function handleSubmitLocation(context, session) {
       // 处理非JSON响应
       console.error("n8n返回非JSON响应:", responseText);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
+        JSON.stringify({
+          success: false,
           message: `n8n认证失败: ${responseText}`,
           status: n8nResponse.status
         }),
-        { 
+        {
           status: 401,
           headers: { "Content-Type": "application/json" }
         }
       );
     }
-    
+
     // 检查n8n返回的结果是否包含错误信息
     if (n8nResult.code && n8nResult.code !== 200) {
       // n8n返回了错误状态码
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: n8nResult.message || "n8n处理失败", 
+        JSON.stringify({
+          success: false,
+          message: n8nResult.message || "n8n处理失败",
           hint: n8nResult.hint,
-          code: n8nResult.code 
+          code: n8nResult.code
         }),
-        { 
+        {
           status: n8nResult.code,
           headers: { "Content-Type": "application/json" }
         }
       );
     }
-    
+
     // 成功处理
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "打卡成功", 
-        data: n8nResult 
+      JSON.stringify({
+        success: true,
+        message: "打卡成功",
+        data: n8nResult
       }),
-      { 
+      {
         status: 200,
         headers: { "Content-Type": "application/json" }
       }
@@ -408,7 +408,7 @@ async function handleSubmitLocation(context, session) {
     console.error("处理提交位置数据失败:", error);
     return new Response(
       JSON.stringify({ success: false, message: `处理失败: ${error.message}` }),
-      { 
+      {
         status: 400,
         headers: { "Content-Type": "application/json" }
       }
@@ -419,17 +419,17 @@ async function handleSubmitLocation(context, session) {
 // 处理token刷新
 async function handleTokenRefresh(context, session) {
   const { env } = context;
-  
+
   if (!session) {
     return new Response(
       JSON.stringify({ success: false, message: "未授权访问" }),
-      { 
+      {
         status: 401,
         headers: { "Content-Type": "application/json" }
       }
     );
   }
-  
+
   // 获取JWT配置
   const jwtAlgorithm = env.JWT_ALGORITHM || "HS256";
   const jwtPayload = {
@@ -437,9 +437,9 @@ async function handleTokenRefresh(context, session) {
     exp: Math.floor(Date.now() / 1000) + 60 * 5, // 5分钟过期
     data: session.user
   };
-  
+
   let jwt;
-  
+
   if (jwtAlgorithm === "RS256") {
     // 使用RS256算法和私钥签名
     try {
@@ -447,10 +447,10 @@ async function handleTokenRefresh(context, session) {
       if (!privateKey) {
         throw new Error("RS256算法需要配置JWT_PRIVATE_KEY");
       }
-      
+
       // 导入私钥
       const privateKeyImported = await jose.importPKCS8(privateKey, jwtAlgorithm);
-      
+
       // 使用jose库创建JWT
       jwt = await new jose.SignJWT(jwtPayload)
         .setProtectedHeader({ alg: jwtAlgorithm })
@@ -459,7 +459,7 @@ async function handleTokenRefresh(context, session) {
       console.error("RS256签名失败:", error);
       return new Response(
         JSON.stringify({ success: false, message: "令牌生成失败: " + error.message }),
-        { 
+        {
           status: 500,
           headers: { "Content-Type": "application/json" }
         }
@@ -500,15 +500,15 @@ async function handleTokenRefresh(context, session) {
       );
     }
   }
-  
+
   return new Response(
-    JSON.stringify({ 
-      success: true, 
+    JSON.stringify({
+      success: true,
       token: jwt,
       expiresAt: jwtPayload.exp * 1000, // 转换为毫秒
       algorithm: jwtAlgorithm // 返回使用的算法
     }),
-    { 
+    {
       status: 200,
       headers: { "Content-Type": "application/json" }
     }
@@ -612,7 +612,7 @@ function handleHealthCheck(context) {
 async function verifyJWT(token, context) {
   const { env } = context;
   const jwtAlgorithm = env.JWT_ALGORITHM || "HS256";
-  
+
   try {
     if (jwtAlgorithm === "RS256") {
       // 使用RS256算法和公钥验证
@@ -620,10 +620,10 @@ async function verifyJWT(token, context) {
       if (!publicKey) {
         throw new Error("RS256算法需要配置JWT_PUBLIC_KEY");
       }
-      
+
       // 导入公钥
       const publicKeyImported = await jose.importSPKI(publicKey, jwtAlgorithm);
-      
+
       // 验证JWT
       const { payload } = await jose.jwtVerify(token, publicKeyImported);
       return payload;

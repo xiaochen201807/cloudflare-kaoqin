@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "考勤系统 Cloudflare Pages 版本",
   "scripts": {
-    "dev": "wrangler pages dev --compatibility-date=2023-10-30 --port 8788 .",
+    "dev": "wrangler pages dev --compatibility-date=2023-10-30 --port 8788 ./public",
     "build": "echo 'No build step required'",
     "deploy": "wrangler pages publish .",
     "check": "node scripts/pre-deploy-check.js",
