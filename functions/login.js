@@ -38,8 +38,7 @@ export async function onRequest(context) {
     "Location": authUrl
   });
   
-  // 设置cookie - 本地开发环境移除Secure标志
-  const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  // 设置cookie - 本地开发环境移除Secure标志（使用之前已声明的isLocalhost变量）
   const secureCookie = isLocalhost ? "" : "Secure; ";
   
   headers.append("Set-Cookie", `oauth_state=${state}; Path=/; ${secureCookie}HttpOnly; Max-Age=600; SameSite=Lax`);
