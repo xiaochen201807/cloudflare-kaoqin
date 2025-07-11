@@ -17,8 +17,8 @@ pages_build_output_dir = "./public"
 # 注意：如果不配置KV命名空间，会话管理功能将无法正常工作
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "your_kv_namespace_id"  # 替换为实际的KV命名空间ID
-preview_id = "your_preview_kv_namespace_id"  # 替换为预览环境的KV命名空间ID（可选）
+id = "58d1c2a8f85b407fbdcc4640ab2d1403"  # 已替换为实际的KV命名空间ID
+# preview_id = "your_preview_kv_namespace_id"  # 替换为预览环境的KV命名空间ID（可选）
 
 [vars]
 # 默认配置，可以在Cloudflare Dashboard中覆盖
