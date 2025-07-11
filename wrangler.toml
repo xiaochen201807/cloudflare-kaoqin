@@ -28,8 +28,8 @@ id = "58d1c2a8f85b407fbdcc4640ab2d1403"  # 已替换为实际的KV命名空间ID
 N8N_API_ENDPOINT = "https://n8n.201807.xyz/webhook/dkxx"
 N8N_API_CONFIRM_ENDPOINT = "https://n8n.201807.xyz/webhook/dkxx"
 
-# JWT 算法配置（非敏感信息）
-JWT_ALGORITHM = "HS256"
+# # JWT 算法配置（非敏感信息）
+JWT_ALGORITHM = "RS256"
 
 # 开发环境使用.dev.vars文件存储敏感信息
 # 生产环境在Cloudflare Dashboard的环境变量中配置以下变量：
