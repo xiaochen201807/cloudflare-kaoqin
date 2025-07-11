@@ -40,8 +40,7 @@ export async function onRequest(context) {
     "Location": authUrl
   });
   
-  // 检测是否为本地环境
-  const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  // 使用之前已经声明的 isLocalhost 变量
   const secureCookie = isLocalhost ? "" : "Secure; ";
   
   // 设置cookie
