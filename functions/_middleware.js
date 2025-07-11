@@ -347,6 +347,21 @@ export async function onRequest(context) {
             fill: currentColor;
             flex-shrink: 0;
         }
+
+        .btn-icon-text {
+            margin-right: 12px;
+            width: 20px;
+            height: 20px;
+            background: currentColor;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #c53030;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
@@ -374,9 +389,7 @@ export async function onRequest(context) {
                 使用 GitHub 登录
             </a>
             <a href="/login?provider=gitee" class="login-btn gitee-btn">
-                <svg class="btn-icon" viewBox="0 0 24 24">
-                    <path d="M11.984 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.016 0zm6.09 5.333c.328 0 .593.266.592.593v1.482a.594.594 0 0 1-.593.592H9.777c-.982 0-1.778.796-1.778 1.778v.593c0 .982.796 1.778 1.778 1.778h4.63c.982 0 1.778.796 1.778 1.778v1.482a.593.593 0 0 1-.593.592h-4.63c-.982 0-1.778-.796-1.778-1.778v-.593a.593.593 0 0 0-.592-.593H6.408a.593.593 0 0 1-.593-.592v-1.482c0-.327.266-.593.593-.593h1.185c.327 0 .593-.265.593-.592v-.593c0-1.963 1.593-3.556 3.556-3.556h7.852c.327 0 .593.265.593.592z"/>
-                </svg>
+                <span style="margin-right: 12px; font-weight: bold; font-size: 16px;">G</span>
                 使用 Gitee 登录
             </a>
         </div>
