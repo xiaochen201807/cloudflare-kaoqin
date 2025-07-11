@@ -134,7 +134,7 @@ export async function onRequest(context) {
   const path = url.pathname;
 
   // 在处理请求前验证关键环境变量（除了健康检查端点）
-  if (path !== "/api/health") {
+  if (path !== "/api/health" && path !== "/api/debug") {
     const validationError = validateCriticalEnvVars(env);
     if (validationError) {
       return validationError;
@@ -172,6 +172,11 @@ export async function onRequest(context) {
   // 处理健康检查
   if (path === "/api/health") {
     return handleHealthCheck(context);
+  }
+  
+  // 处理调试信息
+  if (path === "/api/debug") {
+    return handleDebug(context, session);
   }
 
   // 如果API路径不存在，返回404
@@ -246,6 +251,10 @@ function handleConfig(context) {
         apiEndpoints: {
           submitLocation: "/api/submit-location",
           refreshToken: "/api/refresh-token"
+        },
+        map: {
+          amapKey: env.AMAP_KEY || "79a85def4762b3e9024547ee3b8b0e38",
+          amapSecurityCode: env.AMAP_SECURITY_CODE || "630874c2ba395431d05a471a4b4caaa5"
         }
       }
     }),
@@ -517,12 +526,52 @@ async function handleTokenRefresh(context, session) {
 
 // 处理登出
 function handleLogout(context) {
+  const { request, env } = context;
+  const url = new URL(request.url);
+  const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  const secureCookie = isLocalhost ? "" : "Secure; ";
+  
+  console.log("执行登出操作:", {
+    url: url.toString(),
+    isLocalhost: isLocalhost,
+    secureCookie: secureCookie
+  });
+
+  // 获取会话ID
+  const cookieHeader = request.headers.get("Cookie") || "";
+  const cookies = Object.fromEntries(
+    cookieHeader.split("; ").map(c => {
+      const [name, ...value] = c.split("=");
+      return [name, value.join("=")];
+    })
+  );
+  
+  const sessionId = cookies.session_id;
+  console.log("当前会话ID:", sessionId || "无会话");
+  
+  // 如果有会话ID，从KV存储中删除
+  if (sessionId) {
+    // 尝试从KV存储中删除会话
+    // 这是一个异步操作，但我们不需要等待它完成
+    env.SESSIONS.delete(sessionId).catch(error => {
+      console.error("删除会话失败:", error);
+    });
+  }
+
   const headers = new Headers({
     "Location": "/login.html"
   });
 
-  // 清除会话cookie
-  headers.append("Set-Cookie", "session_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT");
+  // 清除会话cookie，即使没有cookie也设置过期的cookie
+  const cookieValue = `session_id=; Path=/; ${secureCookie}HttpOnly; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+  console.log("设置清除Cookie:", cookieValue);
+  
+  headers.append("Set-Cookie", cookieValue);
+  
+  // 添加额外的响应头，防止缓存
+  headers.append("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  headers.append("Pragma", "no-cache");
+  headers.append("Expires", "0");
 
   return new Response("", {
     status: 302,
@@ -606,6 +655,66 @@ function handleHealthCheck(context) {
   const statusCode = allChecksPass ? 200 : 503;
 
   return createSuccessResponse(healthStatus, statusCode);
+}
+
+// 处理调试信息
+function handleDebug(context, session) {
+  const { request, env } = context;
+  const url = new URL(request.url);
+  
+  // 获取所有cookie
+  const cookieHeader = request.headers.get("Cookie") || "";
+  const cookies = Object.fromEntries(
+    cookieHeader.split("; ").map(c => {
+      const [name, ...value] = c.split("=");
+      return [name, value.join("=")];
+    })
+  );
+  
+  // 获取环境变量配置状态（不显示实际值，只显示是否已设置）
+  const envStatus = {
+    GITHUB_CLIENT_ID: !!env.GITHUB_CLIENT_ID,
+    GITHUB_CLIENT_SECRET: !!env.GITHUB_CLIENT_SECRET,
+    REDIRECT_URI: env.REDIRECT_URI ? env.REDIRECT_URI.split(",").map(uri => uri.trim()) : null,
+    GITEE_CLIENT_ID: !!env.GITEE_CLIENT_ID,
+    GITEE_CLIENT_SECRET: !!env.GITEE_CLIENT_SECRET,
+    GITEE_REDIRECT_URI: !!env.GITEE_REDIRECT_URI,
+    JWT_ALGORITHM: env.JWT_ALGORITHM || "HS256",
+    JWT_SECRET: !!env.JWT_SECRET,
+    JWT_PRIVATE_KEY: !!env.JWT_PRIVATE_KEY,
+    JWT_PUBLIC_KEY: !!env.JWT_PUBLIC_KEY
+  };
+  
+  // 创建调试信息
+  const debugInfo = {
+    timestamp: new Date().toISOString(),
+    request: {
+      url: url.toString(),
+      path: url.pathname,
+      method: request.method,
+      headers: Object.fromEntries([...request.headers.entries()].filter(([key]) => !key.toLowerCase().includes("secret") && !key.toLowerCase().includes("authorization"))),
+      cookies: cookies
+    },
+    session: session ? {
+      user: {
+        id: session.user.id,
+        login: session.user.login,
+        name: session.user.name,
+        provider: session.user.provider
+      },
+      expiresAt: new Date(session.expiresAt).toISOString()
+    } : null,
+    environment: envStatus
+  };
+  
+  // 返回调试信息
+  return new Response(
+    JSON.stringify(debugInfo, null, 2),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    }
+  );
 }
 
 // 验证JWT令牌

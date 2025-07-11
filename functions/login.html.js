@@ -1,4 +1,10 @@
-<!DOCTYPE html>
+export async function onRequest(context) {
+  const { request, env } = context;
+  
+  console.log("处理登录选择页面请求");
+  
+  // 读取登录页面HTML
+  const loginHtml = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -116,4 +122,12 @@
     }
   </script>
 </body>
-</html>
+</html>`;
+  
+  // 返回登录页面
+  return new Response(loginHtml, {
+    headers: {
+      "Content-Type": "text/html; charset=utf-8"
+    }
+  });
+} 

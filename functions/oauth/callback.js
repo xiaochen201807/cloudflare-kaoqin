@@ -95,12 +95,18 @@ export async function onRequest(context) {
   
   // 获取cookies
   const cookieHeader = request.headers.get("Cookie") || "";
+  console.log("收到的Cookie头:", cookieHeader);
+  
   const cookies = Object.fromEntries(
     cookieHeader.split("; ").map(c => {
       const [name, ...value] = c.split("=");
       return [name, value.join("=")];
     })
   );
+  
+  console.log("解析的Cookies:", JSON.stringify(cookies));
+  console.log("收到的状态:", state);
+  console.log("Cookie中的状态:", cookies.oauth_state || cookies.gitee_oauth_state);
   
   // 判断是GitHub还是Gitee的回调
   if (cookies.gitee_oauth_state) {
@@ -111,11 +117,14 @@ export async function onRequest(context) {
 }
 
 async function handleGitHubCallback(context, code, state, cookies) {
-  const { env } = context;
+  const { env, request } = context;
 
   try {
-    // 验证状态
-    if (state !== cookies.oauth_state) {
+    // 验证状态 - 本地开发环境下临时禁用状态验证
+    const reqUrl = new URL(request.url);
+    const isLocalDev = reqUrl.hostname === "localhost" || reqUrl.hostname === "127.0.0.1";
+    
+    if (!isLocalDev && state !== cookies.oauth_state) {
       logError(context, new Error("OAuth state mismatch"), {
         expectedState: cookies.oauth_state,
         receivedState: state,
@@ -212,23 +221,45 @@ async function handleGitHubCallback(context, code, state, cookies) {
     }
   
     // 获取用户信息
+    console.log("尝试获取 GitHub 用户信息，使用令牌: " + tokenData.access_token.substring(0, 5) + "...");
+    
     const userResponse = await fetch("https://api.github.com/user", {
       headers: {
-        "Authorization": `Bearer ${tokenData.access_token}`
+        "Authorization": `token ${tokenData.access_token}`,
+        "User-Agent": "CloudflareWorker-KaoQin",
+        "Accept": "application/vnd.github.v3+json"
       }
     });
 
+    // 记录响应详情以便调试
+    console.log("GitHub API Response:", {
+      status: userResponse.status,
+      statusText: userResponse.statusText,
+      headers: Object.fromEntries([...userResponse.headers.entries()]),
+      token: tokenData.access_token.substring(0, 5) + "..." // 只记录令牌的一部分，保护安全
+    });
+
     if (!userResponse.ok) {
+      // 尝试读取响应体以获取更多错误信息
+      let responseText = "";
+      try {
+        responseText = await userResponse.text();
+        console.log("GitHub API Error Response:", responseText);
+      } catch (e) {
+        console.log("无法读取错误响应:", e);
+      }
+
       logError(context, new Error(`GitHub user info request failed: ${userResponse.status}`), {
         provider: "github",
         status: userResponse.status,
-        statusText: userResponse.statusText
+        statusText: userResponse.statusText,
+        responseText
       });
 
       const errorPage = createErrorPage(
         "用户信息获取失败",
         "无法从 GitHub 获取用户信息。",
-        `HTTP状态: ${userResponse.status}\n请检查访问令牌权限`
+        `HTTP状态: ${userResponse.status}\n响应: ${responseText || '无法获取详细错误信息'}\n请检查访问令牌权限和客户端密钥`
       );
 
       return new Response(errorPage, {
@@ -280,7 +311,12 @@ async function handleGitHubCallback(context, code, state, cookies) {
       "Location": returnTo
     });
 
-    headers.append("Set-Cookie", `session_id=${sessionId}; Path=/; Secure; HttpOnly; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`);
+    // 检测是否为本地环境
+    const url = new URL(request.url);
+    const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    const secureCookie = isLocalhost ? "" : "Secure; ";
+
+    headers.append("Set-Cookie", `session_id=${sessionId}; Path=/; ${secureCookie}HttpOnly; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`);
 
     return new Response("", {
       status: 302,
@@ -308,11 +344,14 @@ async function handleGitHubCallback(context, code, state, cookies) {
 }
 
 async function handleGiteeCallback(context, code, state, cookies) {
-  const { env } = context;
+  const { env, request } = context;
 
   try {
-    // 验证状态
-    if (state !== cookies.gitee_oauth_state) {
+    // 验证状态 - 本地开发环境下临时禁用状态验证
+    const reqUrl = new URL(request.url);
+    const isLocalDev = reqUrl.hostname === "localhost" || reqUrl.hostname === "127.0.0.1";
+    
+    if (!isLocalDev && state !== cookies.gitee_oauth_state) {
       logError(context, new Error("Gitee OAuth state mismatch"), {
         expectedState: cookies.gitee_oauth_state,
         receivedState: state,
@@ -458,7 +497,12 @@ async function handleGiteeCallback(context, code, state, cookies) {
       "Location": returnTo
     });
 
-    headers.append("Set-Cookie", `session_id=${sessionId}; Path=/; Secure; HttpOnly; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`);
+    // 检测是否为本地环境
+    const url = new URL(request.url);
+    const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    const secureCookie = isLocalhost ? "" : "Secure; ";
+
+    headers.append("Set-Cookie", `session_id=${sessionId}; Path=/; ${secureCookie}HttpOnly; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`);
 
     return new Response("", {
       status: 302,

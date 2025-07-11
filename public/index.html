@@ -3,17 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>考勤系统</title>
-  <!-- 高德地图 API -->
-  <script type="text/javascript">
-    window._AMapSecurityConfig = {
-      securityJsCode: "630874c2ba395431d05a471a4b4caaa5",
-      serviceHost: '/_AMapService'
-    };
-  </script>
-  <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=79a85def4762b3e9024547ee3b8b0e38&plugin=AMap.PlaceSearch,AMap.ToolBar,AMap.Scale"></script>
-  <!-- 百度地图 API -->
-  <script type="text/javascript" src="//api.map.baidu.com/api?v=2.0&ak=Cwz4f2OiXoU4seMvZkaALIkLAcfsMHHr"></script>
+  <title>考勤打卡系统</title>
   <!-- 错误处理器 -->
   <script src="/js/error-handler.js"></script>
   <!-- 会话管理器 -->
@@ -79,16 +69,12 @@
       position: relative;
     }
     
-    #container, #bmap {
+    #container {
       width: 100%;
       height: 100%;
       position: absolute;
       top: 0;
       left: 0;
-    }
-    
-    #bmap {
-      display: none;
     }
     
     .map-toggle {
@@ -259,15 +245,12 @@
   
   <div class="main-content">
     <div class="map-container">
-      <!-- 地图切换按钮 -->
+      <!-- 地图标题 -->
       <div class="map-toggle">
         <button id="amap-btn" class="active">高德地图</button>
-        <button id="bmap-btn">百度地图</button>
       </div>
       <!-- 高德地图容器 -->
       <div id="container"></div>
-      <!-- 百度地图容器 -->
-      <div id="bmap"></div>
     </div>
     
     <div class="control-panel">
@@ -358,23 +341,58 @@
     const amapContainer = document.getElementById('container');
     const bmapContainer = document.getElementById('bmap');
     
+    // 坐标系转换工具函数
+    // GCJ-02（高德）坐标转换为BD-09（百度）坐标
+    function gcj02tobd09(lng, lat) {
+      if (!lng || !lat) return [lng, lat];
+      
+      const x_PI = 3.14159265358979324 * 3000.0 / 180.0;
+      const z = Math.sqrt(lng * lng + lat * lat) + 0.00002 * Math.sin(lat * x_PI);
+      const theta = Math.atan2(lat, lng) + 0.000003 * Math.cos(lng * x_PI);
+      const bd_lng = z * Math.cos(theta) + 0.0065;
+      const bd_lat = z * Math.sin(theta) + 0.006;
+      
+      return [bd_lng, bd_lat];
+    }
+
+    // BD-09（百度）坐标转换为GCJ-02（高德）坐标
+    function bd09togcj02(bd_lng, bd_lat) {
+      if (!bd_lng || !bd_lat) return [bd_lng, bd_lat];
+      
+      const x_PI = 3.14159265358979324 * 3000.0 / 180.0;
+      const x = bd_lng - 0.0065;
+      const y = bd_lat - 0.006;
+      const z = Math.sqrt(x * x + y * y) - 0.00002 * Math.sin(y * x_PI);
+      const theta = Math.atan2(y, x) - 0.000003 * Math.cos(x * x_PI);
+      const gcj_lng = z * Math.cos(theta);
+      const gcj_lat = z * Math.sin(theta);
+      
+      return [gcj_lng, gcj_lat];
+    }
+    
     // 初始化
     async function init() {
       showLoading();
-      
+
       try {
         // 获取用户信息
         await fetchUserInfo();
-        
+
         // 获取API配置
         await fetchApiConfig();
-        
+
+        // 动态加载地图API
+        await loadMapAPIs();
+
         // 初始化高德地图
         initAMap();
-        
+
+        // 检查地理位置权限
+        await checkLocationPermission();
+
         // 获取当前位置
         await getCurrentPosition();
-        
+
         // 绑定事件
         bindEvents();
       } catch (error) {
@@ -403,12 +421,44 @@
     async function fetchApiConfig() {
       const response = await fetch('/api/config');
       const data = await response.json();
-      
+
       if (!data.success) {
         throw new Error(data.message || '获取配置信息失败');
       }
-      
+
       apiConfig = data.config;
+    }
+
+    // 动态加载地图API
+    async function loadMapAPIs() {
+      try {
+        if (!apiConfig || !apiConfig.map) {
+          throw new Error('地图配置信息获取失败');
+        }
+
+        // 设置高德地图安全配置
+        window._AMapSecurityConfig = {
+          securityJsCode: apiConfig.map.amapSecurityCode,
+          serviceHost: '/_AMapService'
+        };
+
+        // 动态加载高德地图API
+        const amapScript = document.createElement('script');
+        amapScript.src = `https://webapi.amap.com/maps?v=2.0&key=${apiConfig.map.amapKey}&plugin=AMap.PlaceSearch,AMap.ToolBar,AMap.Scale`;
+        amapScript.async = true;
+
+        // 等待高德地图API加载完成
+        await new Promise((resolve, reject) => {
+          amapScript.onload = resolve;
+          amapScript.onerror = reject;
+          document.head.appendChild(amapScript);
+        });
+
+        console.log('高德地图API加载完成');
+      } catch (error) {
+        console.error('地图API加载失败:', error);
+        throw error;
+      }
     }
     
     // 初始化高德地图
@@ -742,11 +792,58 @@
       }
     }
     
+    // 检查地理位置权限
+    async function checkLocationPermission() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.permissions || !navigator.permissions.query) {
+          console.log('浏览器不支持权限API，尝试直接获取位置');
+          resolve();
+          return;
+        }
+        
+        navigator.permissions.query({ name: 'geolocation' }).then(permissionStatus => {
+          console.log('地理位置权限状态:', permissionStatus.state);
+          
+          if (permissionStatus.state === 'denied') {
+            alert('您已拒绝位置权限，请在浏览器设置中允许网站获取位置，然后刷新页面。');
+            reject(new Error('位置权限被拒绝'));
+          } else if (permissionStatus.state === 'prompt') {
+            alert('请允许网站获取您的位置，以便正常使用打卡功能。');
+            resolve();
+          } else {
+            resolve();
+          }
+          
+          // 监听权限变化
+          permissionStatus.onchange = function() {
+            console.log('地理位置权限状态变更为:', this.state);
+            if (this.state === 'denied') {
+              alert('您已拒绝位置权限，请在浏览器设置中允许网站获取位置，然后刷新页面。');
+            }
+          };
+        }).catch(error => {
+          console.error('检查位置权限失败:', error);
+          resolve(); // 继续执行，让getCurrentPosition处理错误
+        });
+      });
+    }
+
     // 获取当前位置
     async function getCurrentPosition() {
       return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          const errorMsg = '您的浏览器不支持地理定位功能，请使用现代浏览器访问。';
+          currentAddressEl.textContent = errorMsg;
+          currentCoordsEl.textContent = errorMsg;
+          accuracyEl.textContent = errorMsg;
+          reject(new Error(errorMsg));
+          return;
+        }
+        
+        console.log('开始获取位置...');
         navigator.geolocation.getCurrentPosition(
           async (position) => {
+            console.log('成功获取位置:', position);
             const { latitude, longitude, accuracy } = position.coords;
             
             currentPosition = {
@@ -793,14 +890,26 @@
           },
           (error) => {
             console.error('获取位置失败:', error);
-            currentAddressEl.textContent = '无法获取位置信息';
+            const errorMsg = getPositionErrorMessage(error);
+            currentAddressEl.textContent = '无法获取位置信息: ' + errorMsg;
             currentCoordsEl.textContent = '无法获取位置信息';
             accuracyEl.textContent = '无法获取位置信息';
-            reject(new Error('获取位置失败: ' + getPositionErrorMessage(error)));
+            
+            // 显示详细的错误提示
+            if (error.code === error.PERMISSION_DENIED) {
+              alert('您已拒绝位置权限，请在浏览器设置中允许网站获取位置，然后刷新页面。\n\n' +
+                    '在Chrome浏览器中：点击地址栏左侧的锁图标 > 权限 > 位置 > 允许');
+            } else if (error.code === error.POSITION_UNAVAILABLE) {
+              alert('位置信息不可用。请确保您的设备已开启GPS或位置服务，并且在室外或窗边等GPS信号良好的地方。');
+            } else if (error.code === error.TIMEOUT) {
+              alert('获取位置超时。请检查您的网络连接和GPS信号，然后点击"刷新位置"按钮重试。');
+            }
+            
+            reject(new Error('获取位置失败: ' + errorMsg));
           },
           {
             enableHighAccuracy: true,
-            timeout: 10000,
+            timeout: 15000, // 增加超时时间到15秒
             maximumAge: 0
           }
         );
@@ -970,6 +1079,13 @@
     
     // 处理登出
     function handleLogout() {
+      console.log("用户点击退出按钮，准备退出");
+      
+      // 显示加载提示
+      showLoading();
+      
+      // 直接使用window.location.href跳转，而不是使用fetch
+      // 这样可以确保在任何情况下都能正确退出
       window.location.href = '/api/logout';
     }
     

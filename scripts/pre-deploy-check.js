@@ -147,7 +147,7 @@ function checkFunctionFiles() {
   };
   
   const requiredFunctions = [
-    'functions/api/[...route].js',
+    'functions/api/[routes].js',
     'functions/oauth/callback.js',
     'functions/login.js'
   ];
@@ -186,7 +186,6 @@ function checkDocumentation() {
     'README.md',
     'DEPLOYMENT.md',
     'setup-env.md',
-    'ENV-CONFIG.md',
     'KV-SETUP.md'
   ];
   
@@ -316,7 +315,6 @@ function printFinalResults(results) {
     console.log(colorize('\n📖 相关文档:', 'blue'));
     console.log('- setup-env.md: 环境变量配置指南');
     console.log('- DEPLOYMENT.md: 完整部署指南');
-    console.log('- ENV-CONFIG.md: 环境变量配置问题解决方案');
     console.log('- KV-SETUP.md: KV 命名空间设置指南');
   } else {
     console.log(colorize('\n🚀 下一步:', 'green'));

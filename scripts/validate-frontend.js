@@ -12,10 +12,10 @@ const REQUIRED_FILES = [
     path: 'public/index.html',
     description: '主页面',
     checks: [
-      { pattern: /<title>考勤系统<\/title>/, description: '页面标题' },
-      { pattern: /高德地图 API/, description: '高德地图API引用' },
-      { pattern: /function.*getCurrentLocation/, description: '定位功能' },
-      { pattern: /function.*submitLocation/, description: '提交功能' },
+      { pattern: /<title>考勤打卡系统<\/title>/, description: '页面标题' },
+      { pattern: /高德地图/, description: '高德地图引用' },
+      { pattern: /getCurrentPosition|handleRefreshLocation/, description: '定位功能' },
+      { pattern: /handleSubmitLocation|submitLocationBtn/, description: '提交功能' },
       { pattern: /\/api\/user/, description: '用户API调用' },
       { pattern: /\/api\/submit-location/, description: '提交API调用' }
     ]
@@ -27,8 +27,8 @@ const REQUIRED_FILES = [
       { pattern: /<title>考勤系统 - 登录<\/title>/, description: '登录页面标题' },
       { pattern: /github-login/, description: 'GitHub登录按钮' },
       { pattern: /gitee-login/, description: 'Gitee登录按钮' },
-      { pattern: /\/oauth\/login/, description: 'GitHub OAuth链接' },
-      { pattern: /\/oauth\/gitee/, description: 'Gitee OAuth链接' }
+      { pattern: /\/login\?provider=github/, description: 'GitHub OAuth链接' },
+      { pattern: /\/gitee-login\?provider=gitee/, description: 'Gitee OAuth链接' }
     ]
   }
 ];
