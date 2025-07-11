@@ -1,0 +1,42 @@
+name = "cloudflare-kaoqin"
+compatibility_date = "2023-10-30"
+
+[site]
+bucket = "./public"
+
+# KV 命名空间绑定
+#
+# 如何获取KV命名空间ID：
+# 1. 登录 Cloudflare Dashboard (https://dash.cloudflare.com/)
+# 2. 进入 "Workers & Pages"
+# 3. 点击 "KV" 选项卡
+# 4. 创建新的命名空间，名称为 "SESSIONS"
+# 5. 复制命名空间ID并替换下面的占位符
+# 6. 为预览环境创建另一个命名空间（可选），名称为 "SESSIONS_PREVIEW"
+#
+# 注意：如果不配置KV命名空间，会话管理功能将无法正常工作
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "your_kv_namespace_id"  # 替换为实际的KV命名空间ID
+preview_id = "your_preview_kv_namespace_id"  # 替换为预览环境的KV命名空间ID（可选）
+
+[vars]
+# 默认配置，可以在Cloudflare Dashboard中覆盖
+# 注意：敏感信息（如密钥）不应该放在这里，应该在Dashboard的环境变量中配置
+
+# API 端点配置（非敏感信息，可以放在这里）
+N8N_API_ENDPOINT = "https://n8n.201807.xyz/webhook-test/getdkxx"
+N8N_API_CONFIRM_ENDPOINT = "https://n8n.201807.xyz/webhook-test/getdkxx"
+
+# JWT 算法配置（非敏感信息）
+JWT_ALGORITHM = "HS256"
+
+# 开发环境使用.dev.vars文件存储敏感信息
+# 生产环境在Cloudflare Dashboard的环境变量中配置以下变量：
+# - GITHUB_CLIENT_ID
+# - GITHUB_CLIENT_SECRET
+# - REDIRECT_URI
+# - GITEE_CLIENT_ID
+# - GITEE_CLIENT_SECRET
+# - GITEE_REDIRECT_URI
+# - JWT_SECRET (如果使用HS256) 或 JWT_PRIVATE_KEY + JWT_PUBLIC_KEY (如果使用RS256)

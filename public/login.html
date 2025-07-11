@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>考勤系统 - 登录</title>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f5f5f5;
+    }
+    .login-container {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    h1 {
+      margin-top: 0;
+      color: #333;
+    }
+    .login-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .login-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 1rem;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    .github-login {
+      background-color: #24292e;
+      color: white;
+    }
+    .github-login:hover {
+      background-color: #1b1f23;
+    }
+    .gitee-login {
+      background-color: #c71d23;
+      color: white;
+    }
+    .gitee-login:hover {
+      background-color: #a01a1f;
+    }
+    .login-button img {
+      margin-right: 0.5rem;
+      width: 24px;
+      height: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h1>考勤系统</h1>
+    <p>请选择登录方式</p>
+    <div class="login-buttons">
+      <a href="/login" class="login-button github-login">
+        <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub Logo">
+        使用 GitHub 账号登录
+      </a>
+      <a href="/gitee-login" class="login-button gitee-login">
+        <img src="https://gitee.com/static/images/logo-black.svg" alt="Gitee Logo">
+        使用 Gitee 账号登录
+      </a>
+    </div>
+  </div>
+</body>
+</html>

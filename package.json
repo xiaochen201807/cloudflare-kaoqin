@@ -1,0 +1,21 @@
+{
+  "name": "cloudflare-kaoqin",
+  "version": "1.0.0",
+  "description": "考勤系统 Cloudflare Pages 版本",
+  "scripts": {
+    "dev": "wrangler pages dev --compatibility-date=2023-10-30 --port 8788 .",
+    "build": "echo 'No build step required'",
+    "deploy": "wrangler pages publish .",
+    "check": "node scripts/pre-deploy-check.js",
+    "check:env": "node scripts/validate-env.js",
+    "check:frontend": "node scripts/validate-frontend.js",
+    "predeploy": "npm run check"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.20230914.0",
+    "jose": "^4.14.4"
+  },
+  "devDependencies": {
+    "wrangler": "^3.15.0"
+  }
+}

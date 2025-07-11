@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>考勤系统</title>
+  <!-- 高德地图 API -->
+  <script type="text/javascript">
+    window._AMapSecurityConfig = {
+      securityJsCode: "630874c2ba395431d05a471a4b4caaa5",
+      serviceHost: '/_AMapService'
+    };
+  </script>
+  <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=79a85def4762b3e9024547ee3b8b0e38&plugin=AMap.PlaceSearch,AMap.ToolBar,AMap.Scale"></script>
+  <!-- 百度地图 API -->
+  <script type="text/javascript" src="//api.map.baidu.com/api?v=2.0&ak=Cwz4f2OiXoU4seMvZkaALIkLAcfsMHHr"></script>
+  <!-- 错误处理器 -->
+  <script src="/js/error-handler.js"></script>
+  <!-- 会话管理器 -->
+  <script src="/js/session-manager.js"></script>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    .header {
+      background-color: #1976d2;
+      color: white;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+    }
+    
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      margin-right: 0.5rem;
+    }
+    
+    .logout-btn {
+      margin-left: 1rem;
+      background: none;
+      border: 1px solid white;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .map-container {
+      flex: 1;
+      width: 100%;
+      position: relative;
+    }
+    
+    #container, #bmap {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    
+    #bmap {
+      display: none;
+    }
+    
+    .map-toggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: white;
+      border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    
+    .map-toggle button {
+      background: none;
+      border: none;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      outline: none;
+    }
+    
+    .map-toggle button.active {
+      background-color: #1976d2;
+      color: white;
+    }
+    
+    .control-panel {
+      background-color: white;
+      padding: 1rem;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .location-info {
+      margin-bottom: 1rem;
+    }
+    
+    .location-info p {
+      margin: 0.25rem 0;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .btn {
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 4px;
+      font-weight: 500;
+      cursor: pointer;
+      flex: 1;
+    }
+    
+    .btn-primary {
+      background-color: #1976d2;
+      color: white;
+    }
+    
+    .btn-secondary {
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    
+    .loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #1976d2;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .modal-content {
+      background-color: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      max-width: 90%;
+      width: 400px;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+    
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-weight: 500;
+    }
+    
+    .form-group input {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>考勤系统</h1>
+    <div class="user-info">
+      <img id="userAvatar" class="user-avatar" src="" alt="用户头像">
+      <span id="userName"></span>
+      <button class="logout-btn" id="logoutBtn">退出</button>
+    </div>
+  </div>
+  
+  <div class="main-content">
+    <div class="map-container">
+      <!-- 地图切换按钮 -->
+      <div class="map-toggle">
+        <button id="amap-btn" class="active">高德地图</button>
+        <button id="bmap-btn">百度地图</button>
+      </div>
+      <!-- 高德地图容器 -->
+      <div id="container"></div>
+      <!-- 百度地图容器 -->
+      <div id="bmap"></div>
+    </div>
+    
+    <div class="control-panel">
+      <div class="location-info">
+        <p>当前位置: <span id="currentAddress">获取中...</span></p>
+        <p>坐标: <span id="currentCoords">获取中...</span></p>
+        <p>精度: <span id="accuracy">获取中...</span></p>
+      </div>
+      
+      <div class="action-buttons">
+        <button class="btn btn-secondary" id="refreshLocationBtn">刷新位置</button>
+        <button class="btn btn-primary" id="submitLocationBtn">提交打卡</button>
+      </div>
+    </div>
+  </div>
+  
+  <div id="loadingOverlay" class="loading">
+    <div class="spinner"></div>
+  </div>
+  
+  <div id="confirmModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>确认打卡信息</h2>
+        <button class="close-btn" id="closeModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="nameInput">姓名</label>
+          <input type="text" id="nameInput" placeholder="请输入姓名">
+        </div>
+        <div class="form-group">
+          <label for="departmentInput">部门</label>
+          <input type="text" id="departmentInput" placeholder="请输入部门">
+        </div>
+        <div class="form-group">
+          <label>位置信息</label>
+          <p id="confirmAddress"></p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelBtn">取消</button>
+        <button class="btn btn-primary" id="confirmBtn">确认提交</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // 全局变量
+    let map = null;
+    let marker = null;
+    let placeSearch = null;
+    let bmap = null;
+    let bmarker = null;
+    let currentMapType = 'amap'; // 当前地图类型：amap 或 bmap
+    let bmapLoaded = false; // 标记百度地图是否已加载
+    let currentPosition = null;
+    let userInfo = null;
+    let apiConfig = null;
+    
+    // 上次定位的位置
+    let lastPosition = JSON.parse(localStorage.getItem('lastMapPosition')) || {
+      lng: 114.33,
+      lat: 30.59,
+      name: '武汉市',
+      address: '默认位置'
+    };
+    
+    // DOM 元素
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const currentAddressEl = document.getElementById('currentAddress');
+    const currentCoordsEl = document.getElementById('currentCoords');
+    const accuracyEl = document.getElementById('accuracy');
+    const refreshLocationBtn = document.getElementById('refreshLocationBtn');
+    const submitLocationBtn = document.getElementById('submitLocationBtn');
+    const userAvatarEl = document.getElementById('userAvatar');
+    const userNameEl = document.getElementById('userName');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const confirmModal = document.getElementById('confirmModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const nameInput = document.getElementById('nameInput');
+    const departmentInput = document.getElementById('departmentInput');
+    const confirmAddressEl = document.getElementById('confirmAddress');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const amapBtn = document.getElementById('amap-btn');
+    const bmapBtn = document.getElementById('bmap-btn');
+    const amapContainer = document.getElementById('container');
+    const bmapContainer = document.getElementById('bmap');
+    
+    // 初始化
+    async function init() {
+      showLoading();
+      
+      try {
+        // 获取用户信息
+        await fetchUserInfo();
+        
+        // 获取API配置
+        await fetchApiConfig();
+        
+        // 初始化高德地图
+        initAMap();
+        
+        // 获取当前位置
+        await getCurrentPosition();
+        
+        // 绑定事件
+        bindEvents();
+      } catch (error) {
+        console.error('初始化失败:', error);
+        alert('初始化失败: ' + error.message);
+      } finally {
+        hideLoading();
+      }
+    }
+    
+    // 获取用户信息
+    async function fetchUserInfo() {
+      const response = await fetch('/api/user');
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || '获取用户信息失败');
+      }
+      
+      userInfo = data.user;
+      userAvatarEl.src = userInfo.avatar_url;
+      userNameEl.textContent = userInfo.name || userInfo.login;
+    }
+    
+    // 获取API配置
+    async function fetchApiConfig() {
+      const response = await fetch('/api/config');
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || '获取配置信息失败');
+      }
+      
+      apiConfig = data.config;
+    }
+    
+    // 初始化高德地图
+    function initAMap() {
+      // 创建地图实例，使用上次保存的位置作为中心点
+      map = new AMap.Map('container', {
+        zoom: 15, // 使用适中的缩放级别
+        center: [lastPosition.lng, lastPosition.lat], // 使用上次保存的位置
+        viewMode: '3D',
+        resizeEnable: true,
+        // 禁用IP定位，使用自定义中心点
+        enableAutoLocalCity: false
+      });
+      
+      // 地图加载完成后的回调
+      map.on('complete', function() {
+        // 隐藏加载提示
+        loadingOverlay.style.display = 'none';
+      });
+
+      // 添加地图控件
+      map.plugin(['AMap.ToolBar', 'AMap.Scale'], function() {
+        // 添加工具条控件
+        map.addControl(new AMap.ToolBar());
+        // 添加比例尺控件
+        map.addControl(new AMap.Scale());
+      });
+
+      // 初始化地点搜索服务
+      AMap.plugin(['AMap.PlaceSearch', 'AMap.Geocoder'], function() {
+        placeSearch = new AMap.PlaceSearch({
+          pageSize: 5,  // 每页结果数
+          pageIndex: 1, // 页码
+          city: '全国',  // 搜索范围（全国）
+          citylimit: false,  // 是否强制限制在设置的城市内搜索
+          autoFitView: true  // 是否自动调整地图视野到结果区域
+        });
+        
+        // 添加默认标记，显示上次位置
+        marker = new AMap.Marker({
+          position: new AMap.LngLat(lastPosition.lng, lastPosition.lat),
+          title: lastPosition.name || '标记位置',
+          animation: 'AMAP_ANIMATION_DROP',
+          // 使用正确的HTTPS路径
+          icon: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png',
+          draggable: true  // 允许拖动标记
+        });
+        map.add(marker);
+        
+        // 添加默认信息窗体
+        const infoWindow = new AMap.InfoWindow({
+          content: `<div><h3>${lastPosition.name || '标记位置'}</h3><p>${lastPosition.address || ''}</p></div>`,
+          offset: new AMap.Pixel(0, -30)
+        });
+        
+        // 监听标记点击事件
+        marker.on('click', function() {
+          infoWindow.open(map, marker.getPosition());
+        });
+        
+        // 监听标记拖动结束事件
+        marker.on('dragend', function() {
+          const position = marker.getPosition();
+          // 更新坐标输入框
+          updateCoordsDisplay(position);
+          // 更新表单值
+          updateFormValues(position);
+          // 获取地址信息
+          getAddressByCoords(position);
+        });
+      });
+    }
+    
+    // 初始化百度地图
+    function initBMap() {
+      try {
+        console.log('开始初始化百度地图');
+        
+        // 检查BMap是否已定义
+        if (typeof BMap === 'undefined') {
+          console.error('百度地图API未加载，BMap对象不存在');
+          alert('百度地图API未加载完成，请刷新页面重试');
+          return;
+        }
+        
+        // 确保容器可见并清空
+        bmapContainer.style.display = 'block';
+        
+        // 创建百度地图实例
+        bmap = new BMap.Map("bmap");
+        console.log('百度地图实例创建成功');
+        
+        // 高德坐标转百度坐标，使用更精确的算法
+        const gcjPoint = [lastPosition.lng, lastPosition.lat];
+        const bdPoint = gcj02tobd09(gcjPoint[0], gcjPoint[1]);
+        
+        // 设置中心点和缩放级别
+        const point = new BMap.Point(bdPoint[0], bdPoint[1]);
+        bmap.centerAndZoom(point, 15);  // 这一步是必须的
+        
+        // 启用滚轮缩放
+        bmap.enableScrollWheelZoom();
+        
+        // 添加地图控件
+        bmap.addControl(new BMap.NavigationControl());  // 添加平移缩放控件
+        bmap.addControl(new BMap.ScaleControl());       // 添加比例尺控件
+        
+        // 创建标记
+        bmarker = new BMap.Marker(point);
+        bmap.addOverlay(bmarker);
+        
+        // 允许标记拖动
+        bmarker.enableDragging();
+        
+        // 监听地图点击事件
+        bmap.addEventListener("click", function(e) {
+          // 移动标记到点击位置
+          bmarker.setPosition(e.point);
+          
+          // 百度坐标转高德坐标，使用更精确的算法
+          const gcjPoint = bd09togcj02(e.point.lng, e.point.lat);
+          
+          // 更新坐标输入框
+          updateCoordsDisplay(new AMap.LngLat(gcjPoint[0], gcjPoint[1]));
+          
+          // 更新表单值
+          updateFormValues(new AMap.LngLat(gcjPoint[0], gcjPoint[1]));
+          
+          // 获取地址信息
+          getBMapAddressByCoords(e.point);
+          
+          // 保存最新位置
+          saveLastPosition({
+            lng: gcjPoint[0],
+            lat: gcjPoint[1],
+            name: lastPosition.name,
+            address: lastPosition.address
+          });
+        });
+        
+        // 监听标记拖动结束事件
+        bmarker.addEventListener("dragend", function() {
+          const point = bmarker.getPosition();
+          
+          // 百度坐标转高德坐标
+          const gcjPoint = bd09togcj02(point.lng, point.lat);
+          
+          // 更新坐标输入框
+          updateCoordsDisplay(new AMap.LngLat(gcjPoint[0], gcjPoint[1]));
+          
+          // 更新表单值
+          updateFormValues(new AMap.LngLat(gcjPoint[0], gcjPoint[1]));
+          
+          // 获取地址信息
+          getBMapAddressByCoords(point);
+        });
+        
+        // 初始化百度地图搜索功能
+        initBMapSearch();
+        
+        console.log('百度地图初始化完成');
+        bmapLoaded = true;
+        
+        // 触发窗口resize事件，解决可能的地图显示问题
+        setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+          if (bmap) bmap.checkResize();
+        }, 200);
+      } catch (error) {
+        console.error('百度地图初始化失败:', error);
+        alert('百度地图初始化失败: ' + error.message);
+      }
+    }
+    
+    // 初始化百度地图搜索功能
+    function initBMapSearch() {
+      // 创建地址搜索实例
+      const localSearch = new BMap.LocalSearch(bmap, {
+        renderOptions: {
+          map: bmap,
+          autoViewport: true,
+          selectFirstResult: false
+        },
+        onSearchComplete: function(results) {
+          // 搜索完成后回调
+          if (results && results.getNumPois()) {
+            const poi = results.getPoi(0);
+            if (poi) {
+              // 清除之前的标记
+              bmap.clearOverlays();
+              
+              // 设置新标记
+              bmarker = new BMap.Marker(poi.point);
+              bmap.addOverlay(bmarker);
+              
+              // 设置地图中心点并放大
+              bmap.setCenter(poi.point);
+              
+              // 弹出信息窗体
+              const infoWindow = new BMap.InfoWindow(`<div><h3>${poi.title}</h3><p>${poi.address || ''}</p></div>`);
+              bmarker.openInfoWindow(infoWindow);
+              
+              // 百度坐标转高德坐标
+              const gcjPoint = bd09togcj02(poi.point.lng, poi.point.lat);
+              
+              // 更新坐标显示
+              updateCoordsDisplay(new AMap.LngLat(gcjPoint[0], gcjPoint[1]));
+              
+              // 更新表单值
+              updateFormValues(new AMap.LngLat(gcjPoint[0], gcjPoint[1]), poi.title, poi.address);
+              
+              // 保存最新位置
+              saveLastPosition({
+                lng: gcjPoint[0],
+                lat: gcjPoint[1],
+                name: poi.title,
+                address: poi.address
+              });
+              
+              // 允许标记拖动
+              bmarker.enableDragging();
+              bmarker.addEventListener("dragend", function() {
+                const point = bmarker.getPosition();
+                
+                // 百度坐标转高德坐标
+                const gcjPoint = bd09togcj02(point.lng, point.lat);
+                
+                // 更新坐标输入框
+                updateCoordsDisplay(new AMap.LngLat(gcjPoint[0], gcjPoint[1]));
+                
+                // 更新表单值
+                updateFormValues(new AMap.LngLat(gcjPoint[0], gcjPoint[1]));
+                
+                // 获取地址信息
+                getBMapAddressByCoords(point);
+              });
+            }
+          } else {
+            console.log('百度地图搜索无结果');
+          }
+        }
+      });
+      
+      // 将百度搜索实例保存到全局变量
+      window.bMapSearch = localSearch;
+    }
+    
+    // 切换地图函数
+    function switchMap(mapType) {
+      if (mapType === currentMapType) return;
+      
+      console.log('切换地图类型:', mapType);
+      currentMapType = mapType;
+      
+      if (mapType === 'amap') {
+        // 切换到高德地图
+        amapContainer.style.display = 'block';
+        bmapContainer.style.display = 'none';
+        amapBtn.classList.add('active');
+        bmapBtn.classList.remove('active');
+        
+        // 如果百度地图已加载，则同步位置
+        if (bmap && bmarker) {
+          const position = bmarker.getPosition();
+          // 百度坐标转高德坐标，使用更精确的算法
+          const gcjPoint = bd09togcj02(position.lng, position.lat);
+          
+          // 更新高德地图位置
+          if (map && marker) {
+            map.setCenter([gcjPoint[0], gcjPoint[1]]);
+            marker.setPosition(new AMap.LngLat(gcjPoint[0], gcjPoint[1]));
+          }
+        }
+        
+        // 触发窗口resize事件，解决可能的高德地图显示问题
+        window.dispatchEvent(new Event('resize'));
+      } else {
+        // 切换到百度地图
+        amapContainer.style.display = 'none';
+        bmapContainer.style.display = 'block';
+        bmapBtn.classList.add('active');
+        amapBtn.classList.remove('active');
+        
+        // 检查百度地图API是否已加载
+        if (typeof BMap === 'undefined') {
+          console.error('百度地图API未加载，无法切换');
+          alert('百度地图API尚未加载完成，请稍后再试');
+          // 切回高德地图
+          switchMap('amap');
+          return;
+        }
+        
+        // 如果百度地图未初始化，则初始化
+        if (!bmap) {
+          console.log('百度地图未初始化，开始初始化');
+          setTimeout(initBMap, 100); // 延迟初始化，确保DOM已准备好
+        } else {
+          console.log('百度地图已初始化，刷新地图');
+          // 触发地图resize事件，解决可能的显示问题
+          setTimeout(() => {
+            if (bmap) {
+              try {
+                // 使用正确的百度地图方法来处理大小变化
+                bmap.checkResize();
+                console.log('百度地图resize完成');
+              } catch (e) {
+                console.error('百度地图resize失败:', e);
+                // 尝试重新初始化
+                initBMap();
+              }
+            }
+          }, 100);
+          
+          if (map && marker) {
+            // 如果高德地图已加载，则同步位置
+            const position = marker.getPosition();
+            // 高德坐标转百度坐标，使用更精确的算法
+            const gcjPoint = [position.lng, position.lat];
+            const bdPoint = gcj02tobd09(gcjPoint[0], gcjPoint[1]);
+            
+            // 更新百度地图位置
+            bmap.setCenter(new BMap.Point(bdPoint[0], bdPoint[1]));
+            if (bmarker) {
+              bmarker.setPosition(new BMap.Point(bdPoint[0], bdPoint[1]));
+            }
+          }
+        }
+        
+        // 触发窗口resize事件，解决可能的百度地图显示问题
+        window.dispatchEvent(new Event('resize'));
+      }
+    }
+    
+    // 获取当前位置
+    async function getCurrentPosition() {
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude, accuracy } = position.coords;
+            
+            currentPosition = {
+              latitude,
+              longitude,
+              accuracy
+            };
+            
+            // 更新位置信息
+            currentCoordsEl.textContent = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            accuracyEl.textContent = `${accuracy.toFixed(2)} 米`;
+            
+            // 根据当前地图类型更新地图
+            if (currentMapType === 'amap') {
+              // 更新高德地图
+              if (map && marker) {
+                map.setCenter([longitude, latitude]);
+                marker.setPosition(new AMap.LngLat(longitude, latitude));
+                
+                // 获取地址信息
+                getAddressByCoords(new AMap.LngLat(longitude, latitude));
+              }
+            } else if (currentMapType === 'bmap' && bmap && bmarker) {
+              // 高德坐标转百度坐标
+              const bdPoint = gcj02tobd09(longitude, latitude);
+              
+              // 更新百度地图
+              bmap.setCenter(new BMap.Point(bdPoint[0], bdPoint[1]));
+              bmarker.setPosition(new BMap.Point(bdPoint[0], bdPoint[1]));
+              
+              // 获取地址信息
+              getBMapAddressByCoords(new BMap.Point(bdPoint[0], bdPoint[1]));
+            }
+            
+            // 保存最新位置
+            saveLastPosition({
+              lng: longitude,
+              lat: latitude,
+              name: lastPosition.name,
+              address: lastPosition.address
+            });
+            
+            resolve();
+          },
+          (error) => {
+            console.error('获取位置失败:', error);
+            currentAddressEl.textContent = '无法获取位置信息';
+            currentCoordsEl.textContent = '无法获取位置信息';
+            accuracyEl.textContent = '无法获取位置信息';
+            reject(new Error('获取位置失败: ' + getPositionErrorMessage(error)));
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
+        );
+      });
+    }
+    
+    // 高德地图获取地址信息
+    function getAddressByCoords(position) {
+      AMap.plugin('AMap.Geocoder', function() {
+        const geocoder = new AMap.Geocoder();
+        geocoder.getAddress(position, function(status, result) {
+          if (status === 'complete' && result.info === 'OK') {
+            const address = result.regeocode.formattedAddress;
+            currentAddressEl.textContent = address;
+            currentPosition.address = address;
+            
+            // 更新表单值
+            updateFormValues(position, null, address);
+          } else {
+            console.error('获取地址失败:', result);
+            currentAddressEl.textContent = '获取地址失败';
+          }
+        });
+      });
+    }
+    
+    // 百度地图获取地址信息
+    function getBMapAddressByCoords(point) {
+      const geoc = new BMap.Geocoder();
+      geoc.getLocation(point, function(rs) {
+        if (rs.addressComponents) {
+          const address = rs.addressComponents.province + rs.addressComponents.city + rs.addressComponents.district + rs.addressComponents.street + rs.addressComponents.streetNumber;
+          currentAddressEl.textContent = address;
+          currentPosition.address = address;
+          
+          // 更新表单值
+          updateFormValues(new AMap.LngLat(point.lng, point.lat), null, address);
+        } else {
+          console.error('百度地图获取地址失败:', rs);
+          currentAddressEl.textContent = '获取地址失败';
+        }
+      });
+    }
+    
+    // 更新表单值
+    function updateFormValues(position, name = null, address = null) {
+      if (name) {
+        nameInput.value = name;
+      }
+      if (address) {
+        confirmAddressEl.textContent = address;
+      }
+      if (position) {
+        currentPosition = {
+          latitude: position.lat,
+          longitude: position.lng,
+          accuracy: currentPosition ? currentPosition.accuracy : null,
+          address: address || currentPosition.address
+        };
+      }
+    }
+    
+    // 保存上次定位的位置
+    function saveLastPosition(position) {
+      localStorage.setItem('lastMapPosition', JSON.stringify(position));
+    }
+    
+    // 绑定事件
+    function bindEvents() {
+      refreshLocationBtn.addEventListener('click', handleRefreshLocation);
+      submitLocationBtn.addEventListener('click', handleSubmitLocation);
+      logoutBtn.addEventListener('click', handleLogout);
+      closeModalBtn.addEventListener('click', hideConfirmModal);
+      cancelBtn.addEventListener('click', hideConfirmModal);
+      confirmBtn.addEventListener('click', handleConfirmSubmit);
+      amapBtn.addEventListener('click', () => switchMap('amap'));
+      bmapBtn.addEventListener('click', () => switchMap('bmap'));
+    }
+    
+    // 处理刷新位置
+    async function handleRefreshLocation() {
+      showLoading();
+      
+      try {
+        await getCurrentPosition();
+      } catch (error) {
+        console.error('刷新位置失败:', error);
+        alert('刷新位置失败: ' + error.message);
+      } finally {
+        hideLoading();
+      }
+    }
+    
+    // 处理提交位置
+    function handleSubmitLocation() {
+      if (!currentPosition) {
+        alert('请先获取位置信息');
+        return;
+      }
+      
+      // 填充确认模态框
+      nameInput.value = userInfo.name || userInfo.login || '';
+      departmentInput.value = '';
+      confirmAddressEl.textContent = currentPosition.address || '未知地址';
+      
+      // 显示确认模态框
+      showConfirmModal();
+    }
+    
+    // 处理确认提交
+    async function handleConfirmSubmit() {
+      const name = nameInput.value.trim();
+      const department = departmentInput.value.trim();
+      
+      if (!name) {
+        alert('请输入姓名');
+        return;
+      }
+      
+      hideConfirmModal();
+      showLoading();
+      
+      try {
+        // 先刷新令牌
+        const tokenData = await refreshToken();
+        
+        // 准备提交数据
+        const submitData = {
+          confirmed: true,
+          location: {
+            latitude: currentPosition.latitude,
+            longitude: currentPosition.longitude,
+            accuracy: currentPosition.accuracy,
+            address: currentPosition.address || '未知地址'
+          },
+          confirmData: {
+            name,
+            department,
+            timestamp: new Date().toISOString()
+          }
+        };
+        
+        // 提交数据
+        const response = await fetch('/api/submit-location', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${tokenData.token}`
+          },
+          body: JSON.stringify(submitData)
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.message || '提交失败');
+        }
+        
+        alert('打卡成功!');
+      } catch (error) {
+        console.error('提交失败:', error);
+        alert('提交失败: ' + error.message);
+      } finally {
+        hideLoading();
+      }
+    }
+    
+    // 处理登出
+    function handleLogout() {
+      window.location.href = '/api/logout';
+    }
+    
+    // 显示确认模态框
+    function showConfirmModal() {
+      confirmModal.style.display = 'flex';
+    }
+    
+    // 隐藏确认模态框
+    function hideConfirmModal() {
+      confirmModal.style.display = 'none';
+    }
+    
+    // 显示加载中
+    function showLoading() {
+      loadingOverlay.style.display = 'flex';
+    }
+    
+    // 隐藏加载中
+    function hideLoading() {
+      loadingOverlay.style.display = 'none';
+    }
+    
+    // 获取位置错误信息
+    function getPositionErrorMessage(error) {
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          return '用户拒绝了位置请求';
+        case error.POSITION_UNAVAILABLE:
+          return '位置信息不可用';
+        case error.TIMEOUT:
+          return '获取位置超时';
+        default:
+          return '未知错误';
+      }
+    }
+    
+    // 刷新令牌
+    async function refreshToken() {
+      try {
+        const response = await fetch('/api/refresh-token');
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.message || '刷新令牌失败');
+        }
+        
+        console.log('令牌刷新成功，使用算法:', data.algorithm);
+        return {
+          token: data.token,
+          expiresAt: data.expiresAt,
+          algorithm: data.algorithm
+        };
+      } catch (error) {
+        console.error('刷新令牌失败:', error);
+        // 如果刷新失败，可能需要重新登录
+        window.location.href = '/login.html';
+        throw error;
+      }
+    }
+    
+    // 初始化应用
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
+
+
+

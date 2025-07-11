@@ -1,0 +1,651 @@
+import * as jose from 'jose';
+
+// 统一错误响应格式
+function createErrorResponse(message, statusCode = 500, details = null) {
+  const errorResponse = {
+    success: false,
+    error: {
+      message,
+      code: statusCode,
+      timestamp: new Date().toISOString()
+    }
+  };
+
+  if (details) {
+    errorResponse.error.details = details;
+  }
+
+  return new Response(
+    JSON.stringify(errorResponse),
+    {
+      status: statusCode,
+      headers: { "Content-Type": "application/json" }
+    }
+  );
+}
+
+// 统一成功响应格式
+function createSuccessResponse(data, statusCode = 200) {
+  return new Response(
+    JSON.stringify({
+      success: true,
+      data,
+      timestamp: new Date().toISOString()
+    }),
+    {
+      status: statusCode,
+      headers: { "Content-Type": "application/json" }
+    }
+  );
+}
+
+// 验证必需的环境变量
+function validateRequiredEnvVars(env, requiredVars) {
+  const missing = [];
+
+  for (const varName of requiredVars) {
+    if (!env[varName]) {
+      missing.push(varName);
+    }
+  }
+
+  return missing;
+}
+
+// 验证JWT配置
+function validateJWTConfig(env) {
+  const algorithm = env.JWT_ALGORITHM || "HS256";
+  const errors = [];
+
+  if (!["HS256", "RS256"].includes(algorithm)) {
+    errors.push("JWT_ALGORITHM must be either 'HS256' or 'RS256'");
+  }
+
+  if (algorithm === "HS256") {
+    if (!env.JWT_SECRET) {
+      errors.push("JWT_SECRET is required when using HS256 algorithm");
+    } else if (env.JWT_SECRET.length < 32) {
+      errors.push("JWT_SECRET must be at least 32 characters long for security");
+    }
+  } else if (algorithm === "RS256") {
+    if (!env.JWT_PRIVATE_KEY) {
+      errors.push("JWT_PRIVATE_KEY is required when using RS256 algorithm");
+    }
+    if (!env.JWT_PUBLIC_KEY) {
+      errors.push("JWT_PUBLIC_KEY is required when using RS256 algorithm");
+    }
+
+    // 验证密钥格式
+    if (env.JWT_PRIVATE_KEY && !env.JWT_PRIVATE_KEY.includes("-----BEGIN PRIVATE KEY-----")) {
+      errors.push("JWT_PRIVATE_KEY must be in valid PEM format");
+    }
+    if (env.JWT_PUBLIC_KEY && !env.JWT_PUBLIC_KEY.includes("-----BEGIN PUBLIC KEY-----")) {
+      errors.push("JWT_PUBLIC_KEY must be in valid PEM format");
+    }
+  }
+
+  return errors;
+}
+
+// 验证关键环境变量
+function validateCriticalEnvVars(env) {
+  const criticalVars = [
+    'GITHUB_CLIENT_ID',
+    'GITHUB_CLIENT_SECRET',
+    'REDIRECT_URI',
+    'GITEE_CLIENT_ID',
+    'GITEE_CLIENT_SECRET',
+    'GITEE_REDIRECT_URI'
+  ];
+
+  const missing = validateRequiredEnvVars(env, criticalVars);
+  if (missing.length > 0) {
+    return createErrorResponse(
+      "Critical environment variables are missing. Please configure all required OAuth settings.",
+      503,
+      {
+        missing: missing,
+        hint: "Check your Cloudflare Dashboard environment variables configuration",
+        documentation: "See setup-env.md for detailed configuration instructions"
+      }
+    );
+  }
+
+  // 验证JWT配置
+  const jwtErrors = validateJWTConfig(env);
+  if (jwtErrors.length > 0) {
+    return createErrorResponse(
+      "JWT configuration is invalid",
+      503,
+      {
+        errors: jwtErrors,
+        hint: "Check your JWT_ALGORITHM and corresponding keys configuration",
+        documentation: "See setup-env.md for JWT configuration instructions"
+      }
+    );
+  }
+
+  return null; // 验证通过
+}
+
+export async function onRequest(context) {
+  const { request, env, params } = context;
+  const url = new URL(request.url);
+  const path = url.pathname;
+
+  // 在处理请求前验证关键环境变量（除了健康检查端点）
+  if (path !== "/api/health") {
+    const validationError = validateCriticalEnvVars(env);
+    if (validationError) {
+      return validationError;
+    }
+  }
+  
+  // 获取会话
+  const session = await getUserSession(context);
+  
+  // 处理用户信息API
+  if (path === "/api/user") {
+    return handleUserInfo(context, session);
+  }
+  
+  // 处理配置API
+  if (path === "/api/config") {
+    return handleConfig(context);
+  }
+  
+  // 处理提交位置数据的API
+  if (path === "/api/submit-location" && request.method === "POST") {
+    return handleSubmitLocation(context, session);
+  }
+  
+  // 处理token刷新
+  if (path === "/api/refresh-token") {
+    return handleTokenRefresh(context, session);
+  }
+  
+  // 处理登出
+  if (path === "/api/logout") {
+    return handleLogout(context);
+  }
+
+  // 处理健康检查
+  if (path === "/api/health") {
+    return handleHealthCheck(context);
+  }
+
+  // 如果API路径不存在，返回404
+  return createErrorResponse("API endpoint not found", 404);
+}
+
+// 获取用户会话
+async function getUserSession(context) {
+  const { request, env } = context;
+  
+  // 从cookie中获取会话ID
+  const cookieHeader = request.headers.get("Cookie") || "";
+  const cookies = Object.fromEntries(
+    cookieHeader.split("; ").map(c => {
+      const [name, ...value] = c.split("=");
+      return [name, value.join("=")];
+    })
+  );
+  
+  const sessionId = cookies.session_id;
+  if (!sessionId) return null;
+  
+  // 从KV存储中获取会话
+  const sessionData = await env.SESSIONS.get(sessionId);
+  if (!sessionData) return null;
+  
+  try {
+    const session = JSON.parse(sessionData);
+    
+    // 检查会话是否过期
+    if (session.expiresAt < Date.now()) {
+      await env.SESSIONS.delete(sessionId);
+      return null;
+    }
+    
+    return session;
+  } catch (e) {
+    return null;
+  }
+}
+
+// 处理用户信息API
+function handleUserInfo(context, session) {
+  if (!session) {
+    return new Response(
+      JSON.stringify({ success: false, message: "未授权访问" }),
+      { 
+        status: 401,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+  }
+  
+  return new Response(
+    JSON.stringify({ success: true, user: session.user }),
+    { 
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    }
+  );
+}
+
+// 处理配置API
+function handleConfig(context) {
+  const { env } = context;
+  
+  // 返回前端需要的配置信息
+  return new Response(
+    JSON.stringify({
+      success: true,
+      config: {
+        apiEndpoints: {
+          submitLocation: "/api/submit-location",
+          refreshToken: "/api/refresh-token"
+        }
+      }
+    }),
+    { 
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    }
+  );
+}
+
+// 处理提交位置数据
+async function handleSubmitLocation(context, session) {
+  const { request, env } = context;
+  
+  try {
+    const requestData = await request.json();
+    let data = { ...requestData };
+    
+    // 添加用户信息到数据中
+    if (session) {
+      data.userId = session.user.id;
+      data.username = session.user.login;
+    }
+    
+    // 选择合适的API端点
+    let n8nEndpoint = env.N8N_API_ENDPOINT;
+    
+    // 如果是确认打卡模式，使用确认打卡API端点
+    if (data.confirmed === true && data.confirmData) {
+      n8nEndpoint = env.N8N_API_CONFIRM_ENDPOINT;
+      // 将确认数据合并到请求中
+      data = { ...data, ...data.confirmData };
+    }
+    
+    // 生成JWT令牌用于认证
+    const jwtAlgorithm = env.JWT_ALGORITHM || "HS256";
+    const jwtPayload = {
+      iss: "kaoqin-system",
+      exp: Math.floor(Date.now() / 1000) + 60 * 5, // 5分钟过期
+      data: data
+    };
+    
+    let jwt;
+    
+    if (jwtAlgorithm === "RS256") {
+      // 使用RS256算法和私钥签名
+      try {
+        const privateKey = env.JWT_PRIVATE_KEY;
+        if (!privateKey) {
+          throw new Error("RS256算法需要配置JWT_PRIVATE_KEY");
+        }
+        
+        // 导入私钥
+        const privateKeyImported = await jose.importPKCS8(privateKey, jwtAlgorithm);
+        
+        // 使用jose库创建JWT
+        jwt = await new jose.SignJWT(jwtPayload)
+          .setProtectedHeader({ alg: jwtAlgorithm })
+          .sign(privateKeyImported);
+      } catch (error) {
+        console.error("RS256签名失败:", error);
+        return new Response(
+          JSON.stringify({ success: false, message: "令牌生成失败: " + error.message }),
+          { 
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+          }
+        );
+      }
+    } else {
+      // 使用HS256算法和密钥签名（默认）
+      const jwtSecret = env.JWT_SECRET;
+      if (!jwtSecret) {
+        return createErrorResponse(
+          "JWT configuration error: JWT_SECRET is required when using HS256 algorithm",
+          500,
+          { algorithm: "HS256", missing: ["JWT_SECRET"] }
+        );
+      }
+
+      if (jwtSecret.length < 32) {
+        return createErrorResponse(
+          "JWT configuration error: JWT_SECRET must be at least 32 characters long for security",
+          500,
+          { algorithm: "HS256", secretLength: jwtSecret.length, minimumLength: 32 }
+        );
+      }
+
+      const secret = new TextEncoder().encode(jwtSecret);
+
+      // 使用jose库创建JWT
+      jwt = await new jose.SignJWT(jwtPayload)
+        .setProtectedHeader({ alg: 'HS256' })
+        .sign(secret);
+    }
+    
+    // 提交数据到n8n
+    const n8nResponse = await fetch(n8nEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${jwt}`
+      },
+      body: JSON.stringify(data)
+    });
+    
+    // 处理n8n响应
+    const responseText = await n8nResponse.text();
+    let n8nResult;
+    
+    try {
+      // 尝试将文本解析为JSON
+      n8nResult = JSON.parse(responseText);
+    } catch (error) {
+      // 处理非JSON响应
+      console.error("n8n返回非JSON响应:", responseText);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: `n8n认证失败: ${responseText}`,
+          status: n8nResponse.status
+        }),
+        { 
+          status: 401,
+          headers: { "Content-Type": "application/json" }
+        }
+      );
+    }
+    
+    // 检查n8n返回的结果是否包含错误信息
+    if (n8nResult.code && n8nResult.code !== 200) {
+      // n8n返回了错误状态码
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: n8nResult.message || "n8n处理失败", 
+          hint: n8nResult.hint,
+          code: n8nResult.code 
+        }),
+        { 
+          status: n8nResult.code,
+          headers: { "Content-Type": "application/json" }
+        }
+      );
+    }
+    
+    // 成功处理
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: "打卡成功", 
+        data: n8nResult 
+      }),
+      { 
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+  } catch (error) {
+    console.error("处理提交位置数据失败:", error);
+    return new Response(
+      JSON.stringify({ success: false, message: `处理失败: ${error.message}` }),
+      { 
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+  }
+}
+
+// 处理token刷新
+async function handleTokenRefresh(context, session) {
+  const { env } = context;
+  
+  if (!session) {
+    return new Response(
+      JSON.stringify({ success: false, message: "未授权访问" }),
+      { 
+        status: 401,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+  }
+  
+  // 获取JWT配置
+  const jwtAlgorithm = env.JWT_ALGORITHM || "HS256";
+  const jwtPayload = {
+    iss: "kaoqin-system",
+    exp: Math.floor(Date.now() / 1000) + 60 * 5, // 5分钟过期
+    data: session.user
+  };
+  
+  let jwt;
+  
+  if (jwtAlgorithm === "RS256") {
+    // 使用RS256算法和私钥签名
+    try {
+      const privateKey = env.JWT_PRIVATE_KEY;
+      if (!privateKey) {
+        throw new Error("RS256算法需要配置JWT_PRIVATE_KEY");
+      }
+      
+      // 导入私钥
+      const privateKeyImported = await jose.importPKCS8(privateKey, jwtAlgorithm);
+      
+      // 使用jose库创建JWT
+      jwt = await new jose.SignJWT(jwtPayload)
+        .setProtectedHeader({ alg: jwtAlgorithm })
+        .sign(privateKeyImported);
+    } catch (error) {
+      console.error("RS256签名失败:", error);
+      return new Response(
+        JSON.stringify({ success: false, message: "令牌生成失败: " + error.message }),
+        { 
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        }
+      );
+    }
+  } else {
+    // 使用HS256算法和密钥签名（默认）
+    try {
+      const jwtSecret = env.JWT_SECRET;
+      if (!jwtSecret) {
+        return createErrorResponse(
+          "JWT configuration error: JWT_SECRET is required when using HS256 algorithm",
+          500,
+          { algorithm: "HS256", missing: ["JWT_SECRET"] }
+        );
+      }
+
+      if (jwtSecret.length < 32) {
+        return createErrorResponse(
+          "JWT configuration error: JWT_SECRET must be at least 32 characters long for security",
+          500,
+          { algorithm: "HS256", secretLength: jwtSecret.length, minimumLength: 32 }
+        );
+      }
+
+      const secret = new TextEncoder().encode(jwtSecret);
+
+      // 使用jose库创建JWT
+      jwt = await new jose.SignJWT(jwtPayload)
+        .setProtectedHeader({ alg: 'HS256' })
+        .sign(secret);
+    } catch (error) {
+      console.error("HS256签名失败:", error);
+      return createErrorResponse(
+        "JWT token generation failed",
+        500,
+        { algorithm: "HS256", error: error.message }
+      );
+    }
+  }
+  
+  return new Response(
+    JSON.stringify({ 
+      success: true, 
+      token: jwt,
+      expiresAt: jwtPayload.exp * 1000, // 转换为毫秒
+      algorithm: jwtAlgorithm // 返回使用的算法
+    }),
+    { 
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    }
+  );
+}
+
+// 处理登出
+function handleLogout(context) {
+  const headers = new Headers({
+    "Location": "/login.html"
+  });
+
+  // 清除会话cookie
+  headers.append("Set-Cookie", "session_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT");
+
+  return new Response("", {
+    status: 302,
+    headers
+  });
+}
+
+// 处理健康检查
+function handleHealthCheck(context) {
+  const { env } = context;
+  const healthStatus = {
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    version: "1.0.0",
+    checks: {}
+  };
+
+  // 检查必需的环境变量
+  const requiredEnvVars = [
+    'GITHUB_CLIENT_ID',
+    'GITHUB_CLIENT_SECRET',
+    'REDIRECT_URI',
+    'GITEE_CLIENT_ID',
+    'GITEE_CLIENT_SECRET',
+    'GITEE_REDIRECT_URI',
+    'N8N_API_ENDPOINT',
+    'N8N_API_CONFIRM_ENDPOINT'
+  ];
+
+  const missingEnvVars = validateRequiredEnvVars(env, requiredEnvVars);
+  healthStatus.checks.environment = {
+    status: missingEnvVars.length === 0 ? "pass" : "fail",
+    missing: missingEnvVars,
+    total: requiredEnvVars.length,
+    configured: requiredEnvVars.length - missingEnvVars.length
+  };
+
+  // 检查JWT配置
+  const jwtErrors = validateJWTConfig(env);
+  healthStatus.checks.jwt = {
+    status: jwtErrors.length === 0 ? "pass" : "fail",
+    algorithm: env.JWT_ALGORITHM || "HS256",
+    errors: jwtErrors
+  };
+
+  // 检查OAuth配置
+  const oauthChecks = {
+    github: {
+      clientId: !!env.GITHUB_CLIENT_ID,
+      clientSecret: !!env.GITHUB_CLIENT_SECRET,
+      redirectUri: !!env.REDIRECT_URI && (env.REDIRECT_URI.startsWith('http://') || env.REDIRECT_URI.startsWith('https://'))
+    },
+    gitee: {
+      clientId: !!env.GITEE_CLIENT_ID,
+      clientSecret: !!env.GITEE_CLIENT_SECRET,
+      redirectUri: !!env.GITEE_REDIRECT_URI && (env.GITEE_REDIRECT_URI.startsWith('http://') || env.GITEE_REDIRECT_URI.startsWith('https://'))
+    }
+  };
+
+  const oauthStatus = Object.values(oauthChecks.github).every(Boolean) && Object.values(oauthChecks.gitee).every(Boolean);
+  healthStatus.checks.oauth = {
+    status: oauthStatus ? "pass" : "fail",
+    providers: oauthChecks
+  };
+
+  // 检查API端点配置
+  const apiEndpointsValid = env.N8N_API_ENDPOINT && env.N8N_API_ENDPOINT.startsWith('https://') &&
+                           env.N8N_API_CONFIRM_ENDPOINT && env.N8N_API_CONFIRM_ENDPOINT.startsWith('https://');
+  healthStatus.checks.apiEndpoints = {
+    status: apiEndpointsValid ? "pass" : "fail",
+    endpoints: {
+      n8nApi: !!env.N8N_API_ENDPOINT,
+      n8nConfirm: !!env.N8N_API_CONFIRM_ENDPOINT
+    }
+  };
+
+  // 总体健康状态
+  const allChecksPass = Object.values(healthStatus.checks).every(check => check.status === "pass");
+  healthStatus.status = allChecksPass ? "healthy" : "unhealthy";
+
+  const statusCode = allChecksPass ? 200 : 503;
+
+  return createSuccessResponse(healthStatus, statusCode);
+}
+
+// 验证JWT令牌
+async function verifyJWT(token, context) {
+  const { env } = context;
+  const jwtAlgorithm = env.JWT_ALGORITHM || "HS256";
+  
+  try {
+    if (jwtAlgorithm === "RS256") {
+      // 使用RS256算法和公钥验证
+      const publicKey = env.JWT_PUBLIC_KEY;
+      if (!publicKey) {
+        throw new Error("RS256算法需要配置JWT_PUBLIC_KEY");
+      }
+      
+      // 导入公钥
+      const publicKeyImported = await jose.importSPKI(publicKey, jwtAlgorithm);
+      
+      // 验证JWT
+      const { payload } = await jose.jwtVerify(token, publicKeyImported);
+      return payload;
+    } else {
+      // 使用HS256算法和密钥验证（默认）
+      const jwtSecret = env.JWT_SECRET;
+      if (!jwtSecret) {
+        throw new Error("JWT_SECRET is required when using HS256 algorithm");
+      }
+
+      if (jwtSecret.length < 32) {
+        throw new Error("JWT_SECRET must be at least 32 characters long for security");
+      }
+
+      const secret = new TextEncoder().encode(jwtSecret);
+
+      // 验证JWT
+      const { payload } = await jose.jwtVerify(token, secret);
+      return payload;
+    }
+  } catch (error) {
+    console.error("JWT验证失败:", error);
+    return null;
+  }
+}
