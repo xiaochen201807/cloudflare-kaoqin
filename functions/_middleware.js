@@ -431,13 +431,14 @@ export async function onRequest(context) {
     }
     console.log("访问主页面，已登录，返回页面内容");
 
-    // 直接返回主页面的HTML内容
+    // 直接返回主页面的HTML内容 - 带有高德地图的考勤页面
     const indexHTML = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>考勤系统</title>
+    <title>考勤打卡系统</title>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=79a85def4762b3e9024547ee3b8b0e38&plugin=AMap.Geolocation"></script>
     <style>
         * {
             margin: 0;
@@ -447,178 +448,318 @@ export async function onRequest(context) {
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            background: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .main-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 地图容器 */
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #mapContainer {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 右侧打卡面板 */
+        .checkin-panel {
+            width: 320px;
+            background: white;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        /* 打卡面板头部 */
+        .panel-header {
             padding: 20px;
-        }
-
-        .container {
-            max-width: 400px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .logo {
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-
-        h1 {
-            color: #333;
-            font-weight: 300;
-            margin-bottom: 10px;
-        }
-
-        .user-info {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-        }
-
-        .checkin-form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        label {
-            margin-bottom: 5px;
-            color: #555;
-            font-weight: 500;
-        }
-
-        input, button {
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .checkin-btn {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            border: none;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.3s ease;
+            text-align: center;
         }
 
-        .checkin-btn:hover {
-            background: #5a67d8;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        .panel-header h1 {
+            font-size: 1.5em;
+            margin-bottom: 5px;
         }
 
-        .checkin-btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+        .panel-header .user-name {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        /* 打卡面板内容 */
+        .panel-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
         }
 
         .location-info {
-            background: #e8f4fd;
-            padding: 10px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #28a745;
+        }
+
+        .location-info h4 {
+            color: #28a745;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        .location-info p {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .coordinates {
+            font-family: monospace;
+            font-size: 0.8em;
+            color: #999;
+        }
+
+        .name-input {
+            margin-bottom: 20px;
+        }
+
+        .name-input label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .name-input input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
             border-radius: 8px;
-            font-size: 14px;
-            color: #0066cc;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .name-input input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #5a6268;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        /* 面板底部 */
+        .panel-footer {
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
         }
 
         .logout-btn {
+            width: 100%;
+            padding: 12px;
             background: #dc3545;
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
-            margin-top: 20px;
+            transition: background-color 0.3s;
         }
 
         .logout-btn:hover {
             background: #c82333;
         }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .checkin-panel {
+                width: 100%;
+                height: 50vh;
+                order: -1;
+            }
+
+            .map-container {
+                height: 50vh;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">📋</div>
-            <h1>考勤系统</h1>
+    <div class="main-container">
+        <!-- 地图容器 -->
+        <div class="map-container">
+            <div id="mapContainer"></div>
         </div>
 
-        <div class="user-info">
-            <p><strong>用户:</strong> <span id="username">加载中...</span></p>
-            <p><strong>手机:</strong> <span id="phone">加载中...</span></p>
+        <!-- 右侧打卡面板 -->
+        <div class="checkin-panel">
+            <!-- 面板头部 -->
+            <div class="panel-header">
+                <h1>📍 考勤打卡</h1>
+                <div class="user-name" id="userDisplayName">加载中...</div>
+            </div>
+
+            <!-- 面板内容 -->
+            <div class="panel-content">
+                <div id="statusMessage"></div>
+
+                <div class="location-info" id="locationInfo">
+                    <h4>📍 当前位置</h4>
+                    <p id="locationAddress">正在获取位置信息...</p>
+                    <p class="coordinates" id="locationCoords">坐标: --</p>
+                </div>
+
+                <div class="name-input">
+                    <label for="realName">真实姓名:</label>
+                    <input type="text" id="realName" name="realName" placeholder="请输入您的真实姓名" required>
+                </div>
+
+                <button class="btn btn-secondary" id="refreshLocationBtn" onclick="refreshLocation()">
+                    🔄 刷新位置
+                </button>
+
+                <button class="btn btn-primary" id="submitLocationBtn" onclick="submitLocation()" disabled>
+                    ✅ 提交打卡
+                </button>
+            </div>
+
+            <!-- 面板底部 -->
+            <div class="panel-footer">
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
         </div>
-
-        <form class="checkin-form" id="checkinForm">
-            <div class="form-group">
-                <label for="realName">真实姓名:</label>
-                <input type="text" id="realName" name="realName" required>
-            </div>
-
-            <div class="location-info" id="locationInfo">
-                正在获取位置信息...
-            </div>
-
-            <button type="submit" class="checkin-btn" id="checkinBtn" disabled>
-                正在获取位置...
-            </button>
-        </form>
-
-        <button class="logout-btn" onclick="logout()">退出登录</button>
     </div>
 
     <script>
+        let map = null;
         let currentLocation = null;
+        let locationMarker = null;
 
-        // 页面加载时获取用户信息和位置
-        window.addEventListener('DOMContentLoaded', function() {
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
             loadUserInfo();
+            initMap();
             getCurrentLocation();
         });
 
-        // 获取用户信息
+        // 初始化高德地图
+        function initMap() {
+            // 创建地图实例
+            map = new AMap.Map('mapContainer', {
+                zoom: 15,
+                center: [116.397428, 39.90923], // 默认中心点（北京）
+                mapStyle: 'amap://styles/normal',
+                viewMode: '2D'
+            });
+
+            // 添加地图控件
+            map.addControl(new AMap.Scale());
+            map.addControl(new AMap.ToolBar());
+        }
+
+        // 加载用户信息
         async function loadUserInfo() {
             try {
                 const response = await fetch('/api/user');
                 if (response.ok) {
-                    const user = await response.json();
-                    document.getElementById('username').textContent = user.username || '未知';
-                    document.getElementById('phone').textContent = user.phone || '未知';
-                    document.getElementById('realName').value = user.realName || user.username || '';
+                    const userData = await response.json();
+                    const displayName = userData.user.name || userData.user.login || '未知用户';
+                    document.getElementById('userDisplayName').textContent = displayName;
+
+                    // 设置默认姓名
+                    const realNameInput = document.getElementById('realName');
+                    if (userData.user.name) {
+                        realNameInput.value = userData.user.name;
+                    }
                 } else {
                     console.error('获取用户信息失败');
+                    showMessage('获取用户信息失败', 'error');
                 }
             } catch (error) {
                 console.error('获取用户信息出错:', error);
+                showMessage('获取用户信息出错', 'error');
             }
         }
 
         // 获取当前位置
         function getCurrentLocation() {
+            showMessage('正在获取位置信息...', 'info');
+
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     function(position) {
@@ -627,106 +768,198 @@ export async function onRequest(context) {
                             longitude: position.coords.longitude
                         };
 
-                        // 使用高德地图API获取地址信息
+                        // 更新地图中心点
+                        const center = [currentLocation.longitude, currentLocation.latitude];
+                        map.setCenter(center);
+                        map.setZoom(16);
+
+                        // 添加或更新位置标记
+                        updateLocationMarker();
+
+                        // 获取地址信息
                         getAddressFromCoords(currentLocation.latitude, currentLocation.longitude);
                     },
                     function(error) {
                         console.error('获取位置失败:', error);
-                        document.getElementById('locationInfo').textContent = '获取位置失败，请检查位置权限';
-                        document.getElementById('checkinBtn').textContent = '位置获取失败';
+                        let errorMsg = '获取位置失败';
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMsg = '位置权限被拒绝，请允许位置访问';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMsg = '位置信息不可用';
+                                break;
+                            case error.TIMEOUT:
+                                errorMsg = '获取位置超时';
+                                break;
+                        }
+                        showMessage(errorMsg, 'error');
+                        document.getElementById('locationAddress').textContent = errorMsg;
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 60000
                     }
                 );
             } else {
-                document.getElementById('locationInfo').textContent = '浏览器不支持位置服务';
-                document.getElementById('checkinBtn').textContent = '不支持位置服务';
+                const errorMsg = '浏览器不支持位置服务';
+                showMessage(errorMsg, 'error');
+                document.getElementById('locationAddress').textContent = errorMsg;
             }
+        }
+
+        // 更新地图上的位置标记
+        function updateLocationMarker() {
+            if (!currentLocation || !map) return;
+
+            // 移除旧标记
+            if (locationMarker) {
+                map.remove(locationMarker);
+            }
+
+            // 创建新标记
+            locationMarker = new AMap.Marker({
+                position: [currentLocation.longitude, currentLocation.latitude],
+                title: '当前位置',
+                icon: new AMap.Icon({
+                    size: new AMap.Size(25, 34),
+                    image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png'
+                })
+            });
+
+            map.add(locationMarker);
+
+            // 添加信息窗体
+            const infoWindow = new AMap.InfoWindow({
+                content: '<div style="padding: 10px;">📍 您的当前位置</div>',
+                offset: new AMap.Pixel(0, -34)
+            });
+
+            locationMarker.on('click', function() {
+                infoWindow.open(map, locationMarker.getPosition());
+            });
         }
 
         // 使用高德地图API获取地址
         async function getAddressFromCoords(lat, lng) {
             try {
-                // 这里需要配置高德地图API密钥
                 const response = await fetch(\`/api/geocode?lat=\${lat}&lng=\${lng}\`);
                 if (response.ok) {
                     const data = await response.json();
-                    document.getElementById('locationInfo').textContent =
-                        \`位置: \${data.address || '未知地址'}\`;
+                    const address = data.address || '未知地址';
+                    document.getElementById('locationAddress').textContent = address;
+                    document.getElementById('locationCoords').textContent =
+                        \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+
+                    showMessage('位置获取成功', 'success');
                 } else {
-                    document.getElementById('locationInfo').textContent =
-                        \`位置: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+                    throw new Error('地理编码API请求失败');
                 }
 
-                document.getElementById('checkinBtn').disabled = false;
-                document.getElementById('checkinBtn').textContent = '签到';
+                // 启用提交按钮
+                document.getElementById('submitLocationBtn').disabled = false;
             } catch (error) {
                 console.error('获取地址失败:', error);
-                document.getElementById('locationInfo').textContent =
-                    \`位置: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
-                document.getElementById('checkinBtn').disabled = false;
-                document.getElementById('checkinBtn').textContent = '签到';
+                document.getElementById('locationAddress').textContent =
+                    \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+                document.getElementById('locationCoords').textContent = '地址解析失败';
+
+                showMessage('地址解析失败，但可以继续打卡', 'error');
+
+                // 即使获取地址失败，也允许提交
+                document.getElementById('submitLocationBtn').disabled = false;
             }
         }
 
-        // 处理签到表单提交
-        document.getElementById('checkinForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        // 刷新位置
+        function refreshLocation() {
+            document.getElementById('submitLocationBtn').disabled = true;
+            getCurrentLocation();
+        }
 
+        // 提交打卡
+        async function submitLocation() {
             if (!currentLocation) {
-                alert('位置信息不可用，无法签到');
+                showMessage('请先获取位置信息', 'error');
                 return;
             }
 
             const realName = document.getElementById('realName').value.trim();
             if (!realName) {
-                alert('请输入真实姓名');
+                showMessage('请输入真实姓名', 'error');
                 return;
             }
 
-            const checkinBtn = document.getElementById('checkinBtn');
-            checkinBtn.disabled = true;
-            checkinBtn.textContent = '签到中...';
+            const submitBtn = document.getElementById('submitLocationBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '提交中...';
 
             try {
-                const response = await fetch('/api/checkin', {
+                const response = await fetch('/api/submit-location', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        realName: realName,
                         latitude: currentLocation.latitude,
-                        longitude: currentLocation.longitude
+                        longitude: currentLocation.longitude,
+                        realName: realName,
+                        timestamp: new Date().toISOString()
                     })
                 });
 
                 if (response.ok) {
                     const result = await response.json();
-                    alert('签到成功！');
+                    showMessage('打卡成功！', 'success');
+                    submitBtn.textContent = '✅ 打卡成功';
+
+                    // 3秒后恢复按钮状态
+                    setTimeout(() => {
+                        submitBtn.textContent = '✅ 提交打卡';
+                        submitBtn.disabled = false;
+                    }, 3000);
                 } else {
                     const error = await response.json();
-                    alert('签到失败: ' + (error.message || '未知错误'));
+                    throw new Error(error.message || '提交失败');
                 }
             } catch (error) {
-                console.error('签到出错:', error);
-                alert('签到出错，请重试');
-            } finally {
-                checkinBtn.disabled = false;
-                checkinBtn.textContent = '签到';
+                console.error('提交打卡出错:', error);
+                showMessage('打卡失败: ' + error.message, 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✅ 提交打卡';
             }
-        });
+        }
+
+        // 显示状态消息
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.getElementById('statusMessage');
+            messageDiv.textContent = message;
+            messageDiv.className = \`status-message status-\${type}\`;
+            messageDiv.style.display = 'block';
+
+            // 3秒后自动隐藏成功消息
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
 
         // 退出登录
         async function logout() {
-            try {
-                const response = await fetch('/api/logout', { method: 'POST' });
-                if (response.ok) {
-                    window.location.href = '/login';
-                } else {
-                    alert('退出登录失败');
+            if (confirm('确定要退出登录吗？')) {
+                try {
+                    const response = await fetch('/api/logout', { method: 'POST' });
+                    if (response.ok) {
+                        window.location.href = '/login';
+                    } else {
+                        showMessage('退出登录失败', 'error');
+                    }
+                } catch (error) {
+                    console.error('退出登录出错:', error);
+                    showMessage('退出登录出错', 'error');
                 }
-            } catch (error) {
-                console.error('退出登录出错:', error);
-                alert('退出登录出错');
             }
         }
     </script>
