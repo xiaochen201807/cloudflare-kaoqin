@@ -10,19 +10,20 @@ export async function onRequest(context) {
     state: state
   });
   
-  // 获取请求的来源URL
-  const origin = url.searchParams.get("origin") || "";
-  
   // 支持多个回调地址，以逗号分隔
   const redirectUris = env.REDIRECT_URI.split(",").map(uri => uri.trim());
-  let redirectUri = redirectUris[0]; // 默认使用第一个
-  
-  if (origin && redirectUris.length > 1) {
-    // 查找包含origin的回调地址
-    const matchedUri = redirectUris.find(uri => uri.includes(origin));
-    if (matchedUri) {
-      redirectUri = matchedUri;
-    }
+
+  // 根据当前访问的域名选择对应的回调地址
+  const currentHost = url.hostname;
+  const isLocalhost = currentHost === "localhost" || currentHost === "127.0.0.1";
+
+  let redirectUri;
+  if (isLocalhost) {
+    // 本地环境，选择 localhost 回调地址
+    redirectUri = redirectUris.find(uri => uri.includes("localhost")) || redirectUris[0];
+  } else {
+    // 生产环境，选择非 localhost 的回调地址
+    redirectUri = redirectUris.find(uri => !uri.includes("localhost")) || redirectUris[0];
   }
   
   console.log("GitHub OAuth配置:", {

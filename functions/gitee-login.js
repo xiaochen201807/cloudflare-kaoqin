@@ -10,13 +10,30 @@ export async function onRequest(context) {
     state: state
   });
   
+  // 支持多个回调地址，以逗号分隔
+  const redirectUris = env.GITEE_REDIRECT_URI.split(",").map(uri => uri.trim());
+
+  // 根据当前访问的域名选择对应的回调地址
+  const currentHost = url.hostname;
+  const isLocalhost = currentHost === "localhost" || currentHost === "127.0.0.1";
+
+  let redirectUri;
+  if (isLocalhost) {
+    // 本地环境，选择 localhost 回调地址
+    redirectUri = redirectUris.find(uri => uri.includes("localhost")) || redirectUris[0];
+  } else {
+    // 生产环境，选择非 localhost 的回调地址
+    redirectUri = redirectUris.find(uri => !uri.includes("localhost")) || redirectUris[0];
+  }
+
   console.log("Gitee OAuth配置:", {
     clientId: env.GITEE_CLIENT_ID ? "已设置" : "未设置",
-    redirectUri: env.GITEE_REDIRECT_URI
+    redirectUri: redirectUri,
+    currentHost: currentHost,
+    isLocalhost: isLocalhost
   });
-  
-  // Gitee只支持单个回调地址
-  const authUrl = `https://gitee.com/oauth/authorize?client_id=${env.GITEE_CLIENT_ID}&redirect_uri=${encodeURIComponent(env.GITEE_REDIRECT_URI)}&response_type=code&state=${state}`;
+
+  const authUrl = `https://gitee.com/oauth/authorize?client_id=${env.GITEE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${state}`;
   
   // 设置状态cookie
   const headers = new Headers({

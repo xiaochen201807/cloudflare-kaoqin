@@ -370,6 +370,20 @@ async function handleGiteeCallback(context, code, state, cookies) {
       });
     }
 
+    // 获取正确的回调地址
+    const redirectUris = env.GITEE_REDIRECT_URI.split(",").map(uri => uri.trim());
+    const currentHost = reqUrl.hostname;
+    const isLocalhost = currentHost === "localhost" || currentHost === "127.0.0.1";
+
+    let redirectUri;
+    if (isLocalhost) {
+      // 本地环境，选择 localhost 回调地址
+      redirectUri = redirectUris.find(uri => uri.includes("localhost")) || redirectUris[0];
+    } else {
+      // 生产环境，选择非 localhost 的回调地址
+      redirectUri = redirectUris.find(uri => !uri.includes("localhost")) || redirectUris[0];
+    }
+
     // 使用授权码交换访问令牌
     const tokenResponse = await fetch(`https://gitee.com/oauth/token`, {
       method: "POST",
@@ -382,7 +396,7 @@ async function handleGiteeCallback(context, code, state, cookies) {
         code,
         client_id: env.GITEE_CLIENT_ID,
         client_secret: env.GITEE_CLIENT_SECRET,
-        redirect_uri: env.GITEE_REDIRECT_URI
+        redirect_uri: redirectUri
       })
     });
 
