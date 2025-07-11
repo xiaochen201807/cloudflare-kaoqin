@@ -1,0 +1,253 @@
+# Cloudflare Pages 考勤系统 - .gitignore
+
+# 环境变量文件（包含敏感信息）
+.dev.vars
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Node.js 依赖
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 包管理器锁定文件（可选择性忽略）
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# 构建输出
+dist/
+build/
+.output/
+.vercel/
+.netlify/
+
+# Cloudflare Workers/Pages 相关
+.wrangler/
+wrangler.toml.bak
+
+# 日志文件
+*.log
+logs/
+*.log.*
+
+# 运行时数据
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# 覆盖率目录
+coverage/
+*.lcov
+.nyc_output/
+
+# 依赖目录
+jspm_packages/
+
+# TypeScript 缓存
+*.tsbuildinfo
+
+# 可选的 npm 缓存目录
+.npm
+
+# 可选的 eslint 缓存
+.eslintcache
+
+# 可选的 REPL 历史
+.node_repl_history
+
+# 输出的 npm 包
+*.tgz
+
+# Yarn 完整性文件
+.yarn-integrity
+
+# dotenv 环境变量文件
+.env.test.local
+.env.production.local
+
+# parcel-bundler 缓存 (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js 构建输出
+.next
+out
+
+# Nuxt.js 构建 / 生成输出
+.nuxt
+dist
+
+# Gatsby 文件
+.cache/
+public
+
+# Vuepress 构建输出
+.vuepress/dist
+
+# Serverless 目录
+.serverless/
+
+# FuseBox 缓存
+.fusebox/
+
+# DynamoDB Local 文件
+.dynamodb/
+
+# TernJS 端口文件
+.tern-port
+
+# 存储在 Webpack 中的 Yarn 完整性文件
+.yarn-integrity
+
+# dotenv 环境变量文件
+.env
+.env.test
+
+# parcel-bundler 缓存 (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# 编辑器和 IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统生成的文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.temp
+temp/
+tmp/
+
+# 备份文件
+*.bak
+*.backup
+*.old
+
+# 测试覆盖率
+coverage/
+.coverage
+htmlcov/
+
+# 本地配置文件
+config.local.js
+config.local.json
+
+# 密钥和证书文件
+*.key
+*.pem
+*.crt
+*.cert
+*.p12
+*.pfx
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 压缩文件
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# 文档生成
+docs/_build/
+site/
+
+# 本地开发工具
+.local/
+.cache/
+
+# Cloudflare 特定
+# KV 命名空间备份
+kv-backup/
+
+# 函数日志
+functions-logs/
+
+# 本地测试数据
+test-data/
+mock-data/
+
+# 性能分析文件
+*.cpuprofile
+*.heapprofile
+
+# 安全扫描结果
+security-scan-results/
+
+# 部署脚本的临时文件
+deploy-temp/
+
+# 自动生成的文档
+api-docs/generated/
+
+# 本地配置覆盖
+wrangler.local.toml
+
+# 开发工具配置
+.eslintrc.local.js
+.prettierrc.local.js
+
+# 本地数据库
+local.db
+dev.db
+
+# 缓存目录
+.cache/
+cache/
+
+# 临时上传文件
+uploads/temp/
+
+# 本地证书
+localhost.pem
+localhost-key.pem
+
+# 开发环境特定文件
+dev-only/
+development-only/
+
+# 测试输出
+test-results/
+test-output/
+
+# 监控和分析
+analytics/
+monitoring/
+
+# 本地脚本
+local-scripts/
+personal-scripts/
+
+# 实验性功能
+experimental/
+beta/
+
+# 个人笔记和文档
+notes.md
+TODO.md
+personal-notes/
+
+# 本地配置模板的实际配置
+config.actual.js
+settings.actual.json
