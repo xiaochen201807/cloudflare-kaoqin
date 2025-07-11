@@ -313,8 +313,8 @@ async function handleGitHubCallback(context, code, state, cookies) {
 
     // 检测是否为本地环境
     const url = new URL(request.url);
-    const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
-    const secureCookie = isLocalhost ? "" : "Secure; ";
+    const isGitHubLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    const secureCookie = isGitHubLocalhost ? "" : "Secure; ";
 
     headers.append("Set-Cookie", `session_id=${sessionId}; Path=/; ${secureCookie}HttpOnly; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`);
 
@@ -373,10 +373,10 @@ async function handleGiteeCallback(context, code, state, cookies) {
     // 获取正确的回调地址
     const redirectUris = env.GITEE_REDIRECT_URI.split(",").map(uri => uri.trim());
     const currentHost = reqUrl.hostname;
-    const isLocalhost = currentHost === "localhost" || currentHost === "127.0.0.1";
+    const isGiteeLocalhost = currentHost === "localhost" || currentHost === "127.0.0.1";
 
     let redirectUri;
-    if (isLocalhost) {
+    if (isGiteeLocalhost) {
       // 本地环境，选择 localhost 回调地址
       redirectUri = redirectUris.find(uri => uri.includes("localhost")) || redirectUris[0];
     } else {
@@ -511,10 +511,9 @@ async function handleGiteeCallback(context, code, state, cookies) {
       "Location": returnTo
     });
 
-    // 检测是否为本地环境
+    // 检测是否为本地环境（使用之前已声明的isGiteeLocalhost变量）
     const url = new URL(request.url);
-    const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
-    const secureCookie = isLocalhost ? "" : "Secure; ";
+    const secureCookie = isGiteeLocalhost ? "" : "Secure; ";
 
     headers.append("Set-Cookie", `session_id=${sessionId}; Path=/; ${secureCookie}HttpOnly; Max-Age=${7 * 24 * 60 * 60}; SameSite=Lax`);
 
