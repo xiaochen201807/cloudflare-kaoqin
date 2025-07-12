@@ -570,35 +570,7 @@ export async function onRequest(context) {
             border: 1px solid #e0e0e0;
         }
 
-        .coord-input-container {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-        }
 
-        .coord-input {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        .coord-btn {
-            padding: 8px 12px;
-            background: #28a745;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .coord-btn:hover {
-            background: #218838;
-            transform: translateY(-1px);
-        }
 
         .current-coords {
             margin-top: 8px;
@@ -908,19 +880,14 @@ export async function onRequest(context) {
                     <button class="search-btn" onclick="searchLocation()">🔍</button>
                 </div>
 
-                <!-- 坐标定位区域 -->
+                <!-- 当前位置坐标显示 -->
                 <div class="coord-section">
                     <div class="section-title">
-                        📍 坐标定位
-                        <button class="clear-btn" onclick="getCurrentCoordinates()" title="获取当前坐标">获取</button>
-                    </div>
-                    <div class="coord-input-container">
-                        <input type="number" id="latInput" class="coord-input" placeholder="纬度" step="any" />
-                        <input type="number" id="lngInput" class="coord-input" placeholder="经度" step="any" />
-                        <button class="coord-btn" onclick="gotoCoordinates()">定位坐标</button>
+                        📍 当前位置坐标
+                        <button class="clear-btn" onclick="getCurrentCoordinates()" title="获取当前位置">定位</button>
                     </div>
                     <div class="current-coords" id="currentCoords">
-                        <small>当前坐标: 获取中...</small>
+                        <small>请先搜索位置或获取当前位置</small>
                     </div>
                 </div>
 
@@ -1420,18 +1387,7 @@ export async function onRequest(context) {
                 }
             });
 
-            // 坐标输入框回车事件
-            document.getElementById('latInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    gotoCoordinates();
-                }
-            });
 
-            document.getElementById('lngInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    gotoCoordinates();
-                }
-            });
         }
 
         // 加载本地存储的数据
@@ -1498,6 +1454,9 @@ export async function onRequest(context) {
                         document.getElementById('locationAddress').textContent = poi.name + ' - ' + poi.address;
                         document.getElementById('locationCoords').textContent =
                             '坐标: ' + location.lat.toFixed(6) + ', ' + location.lng.toFixed(6);
+
+                        // 更新当前坐标显示
+                        updateCurrentCoordsDisplay();
 
                         // 添加到搜索历史
                         addToHistory({
@@ -1614,51 +1573,60 @@ export async function onRequest(context) {
             }
         }
 
-        // 根据坐标定位
-        function gotoCoordinates() {
-            const lat = parseFloat(document.getElementById('latInput').value);
-            const lng = parseFloat(document.getElementById('lngInput').value);
-
-            if (isNaN(lat) || isNaN(lng)) {
-                showMessage('请输入有效的经纬度', 'error');
-                return;
-            }
-
-            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-                showMessage('经纬度范围无效', 'error');
-                return;
-            }
-
-            // 更新地图位置
-            map.setCenter([lng, lat]);
-            map.setZoom(16);
-
-            // 更新当前位置
-            currentLocation = {
-                latitude: lat,
-                longitude: lng
-            };
-
-            // 更新位置标记
-            updateLocationMarker();
-
-            // 获取地址信息
-            getAddressFromCoords(lat, lng);
-
-            // 更新当前坐标显示
-            updateCurrentCoordsDisplay();
-
-            showMessage('定位成功', 'success');
-        }
-
-        // 获取当前坐标
+        // 获取当前位置
         function getCurrentCoordinates() {
-            if (currentLocation) {
-                document.getElementById('latInput').value = currentLocation.latitude.toFixed(6);
-                document.getElementById('lngInput').value = currentLocation.longitude.toFixed(6);
-                showMessage('已获取当前坐标', 'success');
+            if (navigator.geolocation) {
+                showMessage('正在获取位置...', 'info');
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+
+                        // 更新地图位置
+                        map.setCenter([lng, lat]);
+                        map.setZoom(16);
+
+                        // 更新当前位置
+                        currentLocation = {
+                            latitude: lat,
+                            longitude: lng
+                        };
+
+                        // 更新位置标记
+                        updateLocationMarker();
+
+                        // 获取地址信息
+                        getAddressFromCoords(lat, lng);
+
+                        // 更新当前坐标显示
+                        updateCurrentCoordsDisplay();
+
+                        showMessage('定位成功', 'success');
+                    },
+                    function(error) {
+                        console.error('获取位置失败:', error);
+                        let errorMsg = '获取位置失败';
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMsg = '用户拒绝了位置请求';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMsg = '位置信息不可用';
+                                break;
+                            case error.TIMEOUT:
+                                errorMsg = '获取位置超时';
+                                break;
+                        }
+                        showMessage(errorMsg, 'error');
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 60000
+                    }
+                );
             } else {
-                showMessage('请先获取位置信息', 'error');
+                showMessage('浏览器不支持地理位置服务', 'error');
             }
         }
 
