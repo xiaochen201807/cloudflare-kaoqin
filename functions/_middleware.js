@@ -1785,13 +1785,13 @@ export async function onRequest(context) {
 
             historyList.innerHTML = searchHistory.map((item, index) =>
                 '<div class="history-item">' +
-                    '<div class="item-text" title="' + item.name + ' - ' + item.address + '">' +
+                    '<div class="item-text" title="' + item.name + ' - ' + item.address + '" onclick="selectLocationFromHistory(' + index + ')" style="cursor: pointer;">' +
                         '<strong>' + item.name + '</strong><br>' +
                         '<small>' + item.address + '</small>' +
                     '</div>' +
                     '<div class="item-actions">' +
                         '<button class="action-btn favorite-btn" onclick="addToFavorites(searchHistory[' + index + '])" title="收藏">⭐</button>' +
-                        '<button class="action-btn goto-btn" onclick="gotoLocation(' + item.lat + ', ' + item.lng + ')" title="定位">📍</button>' +
+                        '<button class="action-btn goto-btn" onclick="selectLocationFromHistory(' + index + ')" title="选择">📍</button>' +
                         '<button class="action-btn remove-btn" onclick="removeFromHistory(' + index + ')" title="删除">×</button>' +
                     '</div>' +
                 '</div>'
@@ -1809,12 +1809,12 @@ export async function onRequest(context) {
 
             favoriteList.innerHTML = favoriteLocations.map((item, index) =>
                 '<div class="favorite-item">' +
-                    '<div class="item-text" title="' + item.name + ' - ' + item.address + '">' +
+                    '<div class="item-text" title="' + item.name + ' - ' + item.address + '" onclick="selectLocationFromFavorites(' + index + ')" style="cursor: pointer;">' +
                         '<strong>' + item.name + '</strong><br>' +
                         '<small>' + item.address + '</small>' +
                     '</div>' +
                     '<div class="item-actions">' +
-                        '<button class="action-btn goto-btn" onclick="gotoLocation(' + item.lat + ', ' + item.lng + ')" title="定位">📍</button>' +
+                        '<button class="action-btn goto-btn" onclick="selectLocationFromFavorites(' + index + ')" title="选择">📍</button>' +
                         '<button class="action-btn remove-btn" onclick="removeFromFavorites(' + index + ')" title="删除">×</button>' +
                     '</div>' +
                 '</div>'
@@ -1822,7 +1822,7 @@ export async function onRequest(context) {
         }
 
         // 跳转到指定位置
-        function gotoLocation(lat, lng) {
+        function gotoLocation(lat, lng, name, address) {
             // 更新地图位置
             map.setCenter([lng, lat]);
             map.setZoom(16);
@@ -1836,10 +1836,44 @@ export async function onRequest(context) {
             // 更新位置标记
             updateLocationMarker();
 
-            // 获取地址信息
-            getAddressFromCoords(lat, lng);
+            // 如果提供了地址信息，直接使用，否则重新获取
+            if (name && address) {
+                // 更新搜索框显示选择的地点名称
+                document.getElementById('searchInput').value = name;
 
-            showMessage('已定位到指定位置', 'success');
+                // 更新位置信息显示
+                document.getElementById('locationAddress').textContent = name + ' - ' + address;
+                document.getElementById('locationCoords').textContent =
+                    '坐标: ' + lat.toFixed(6) + ', ' + lng.toFixed(6);
+
+                // 更新当前坐标显示
+                updateCurrentCoordsDisplay();
+
+                // 启用提交按钮
+                document.getElementById('submitLocationBtn').disabled = false;
+
+                showMessage('已选择位置: ' + name, 'success');
+            } else {
+                // 获取地址信息
+                getAddressFromCoords(lat, lng);
+                showMessage('已定位到指定位置', 'success');
+            }
+        }
+
+        // 从历史记录选择位置
+        function selectLocationFromHistory(index) {
+            if (index >= 0 && index < searchHistory.length) {
+                const item = searchHistory[index];
+                gotoLocation(item.lat, item.lng, item.name, item.address);
+            }
+        }
+
+        // 从收藏地点选择位置
+        function selectLocationFromFavorites(index) {
+            if (index >= 0 && index < favoriteLocations.length) {
+                const item = favoriteLocations[index];
+                gotoLocation(item.lat, item.lng, item.name, item.address);
+            }
         }
 
         // 从历史记录中删除
