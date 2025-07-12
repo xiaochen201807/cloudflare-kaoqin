@@ -40,7 +40,7 @@ export async function onRequest(context) {
   if (path === "/login") {
     // 检查是否有provider参数
     const provider = url.searchParams.get("provider");
-    console.log(`登录请求 ${path}，provider=${provider}`);
+    console.log('登录请求 ' + path + '，provider=' + provider);
 
     if (!provider) {
       // 如果没有provider参数，直接返回登录页面的HTML内容
@@ -1737,7 +1737,7 @@ export async function onRequest(context) {
                 const submitData = {
                     latitude: currentLocation.latitude,
                     longitude: currentLocation.longitude,
-                    address: currentAddress || `${currentLocation.latitude.toFixed(6)}, ${currentLocation.longitude.toFixed(6)}`,
+                    address: currentAddress || (currentLocation.latitude.toFixed(6) + ', ' + currentLocation.longitude.toFixed(6)),
                     realName: realName,
                     timestamp: new Date().toISOString()
                 };
