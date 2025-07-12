@@ -1126,7 +1126,7 @@ export async function onRequest(context) {
                 delete window[callbackName];
             };
 
-            script.src = `https://restapi.amap.com/v3/config/district?key=caa6c37d36bdac64cf8d3e624fec3323&keywords=中国&subdistrict=0&callback=${callbackName}`;
+            script.src = 'https://restapi.amap.com/v3/config/district?key=caa6c37d36bdac64cf8d3e624fec3323&keywords=' + encodeURIComponent('中国') + '&subdistrict=0&callback=' + callbackName;
             script.onerror = function() {
                 console.log('JSONP测试失败，可能是网络问题');
                 document.head.removeChild(script);
@@ -1151,45 +1151,47 @@ export async function onRequest(context) {
                 }
             }
 
-            const errorHtml = \`
-                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px; color: #856404; max-height: 400px; overflow-y: auto;">
-                    <h3>🔑 高德地图API配置问题</h3>
-                    <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0;">
-                        <p><strong>当前域名：</strong><code>\${currentDomain}</code></p>
-                        <p><strong>API Key：</strong><code>caa6c37d36bdac64cf8d3e624fec3323</code></p>
-                        <p><strong>错误信息：</strong><code>\${errorInfo || '未知错误'}</code></p>
-                    </div>
+            let errorHtml = '<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px; color: #856404; max-height: 400px; overflow-y: auto;">';
+            errorHtml += '<h3>🔑 高德地图API配置问题</h3>';
+            errorHtml += '<div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0;">';
+            errorHtml += '<p><strong>当前域名：</strong><code>' + currentDomain + '</code></p>';
+            errorHtml += '<p><strong>API Key：</strong><code>caa6c37d36bdac64cf8d3e624fec3323</code></p>';
+            errorHtml += '<p><strong>错误信息：</strong><code>' + (errorInfo || '未知错误') + '</code></p>';
+            errorHtml += '</div>';
 
-                    \${errorDetails ? \`
-                    <div style="margin: 15px 0;">
-                        <h4>📋 错误分析：\${errorDetails.name}</h4>
-                        <p><strong>可能原因：</strong></p>
-                        <ul>
-                            \${errorDetails.reasons.map(reason => \`<li>\${reason}</li>\`).join('')}
-                        </ul>
-                        <p><strong>解决方案：</strong></p>
-                        <ol>
-                            \${errorDetails.solutions.map(solution => \`<li>\${solution}</li>\`).join('')}
-                        </ol>
-                    </div>
-                    \` : \`
-                    <div style="margin: 15px 0;">
-                        <p><strong>通用解决步骤：</strong></p>
-                        <ol>
-                            <li>登录 <a href="https://console.amap.com/dev/key" target="_blank">高德开放平台控制台</a></li>
-                            <li>检查Key状态和配额使用情况</li>
-                            <li>确认白名单配置（当前显示"无限制"应该是正常的）</li>
-                            <li>确认已开通：Web服务API、地理编码、逆地理编码、搜索POI</li>
-                        </ol>
-                    </div>
-                    \`}
+            if (errorDetails) {
+                errorHtml += '<div style="margin: 15px 0;">';
+                errorHtml += '<h4>📋 错误分析：' + errorDetails.name + '</h4>';
+                errorHtml += '<p><strong>可能原因：</strong></p>';
+                errorHtml += '<ul>';
+                errorDetails.reasons.forEach(function(reason) {
+                    errorHtml += '<li>' + reason + '</li>';
+                });
+                errorHtml += '</ul>';
+                errorHtml += '<p><strong>解决方案：</strong></p>';
+                errorHtml += '<ol>';
+                errorDetails.solutions.forEach(function(solution) {
+                    errorHtml += '<li>' + solution + '</li>';
+                });
+                errorHtml += '</ol>';
+                errorHtml += '</div>';
+            } else {
+                errorHtml += '<div style="margin: 15px 0;">';
+                errorHtml += '<p><strong>通用解决步骤：</strong></p>';
+                errorHtml += '<ol>';
+                errorHtml += '<li>登录 <a href="https://console.amap.com/dev/key" target="_blank">高德开放平台控制台</a></li>';
+                errorHtml += '<li>检查Key状态和配额使用情况</li>';
+                errorHtml += '<li>确认白名单配置（当前显示"无限制"应该是正常的）</li>';
+                errorHtml += '<li>确认已开通：Web服务API、地理编码、逆地理编码、搜索POI</li>';
+                errorHtml += '</ol>';
+                errorHtml += '</div>';
+            }
 
-                    <div style="background: #e3f2fd; padding: 10px; border-radius: 4px; margin-top: 15px;">
-                        <p><strong>💡 调试建议：</strong></p>
-                        <p>请打开浏览器控制台(F12)查看详细的诊断信息，包括API Key测试结果。</p>
-                    </div>
-                </div>
-            \`;
+            errorHtml += '<div style="background: #e3f2fd; padding: 10px; border-radius: 4px; margin-top: 15px;">';
+            errorHtml += '<p><strong>💡 调试建议：</strong></p>';
+            errorHtml += '<p>请打开浏览器控制台(F12)查看详细的诊断信息，包括API Key测试结果。</p>';
+            errorHtml += '</div>';
+            errorHtml += '</div>';
 
             // 在地图容器中显示错误信息
             const mapContainer = document.getElementById('mapContainer');
@@ -1442,7 +1444,7 @@ export async function onRequest(context) {
                         // 更新位置信息显示
                         document.getElementById('locationAddress').textContent = poi.name + ' - ' + poi.address;
                         document.getElementById('locationCoords').textContent =
-                            \`坐标: \${location.lat.toFixed(6)}, \${location.lng.toFixed(6)}\`;
+                            '坐标: ' + location.lat.toFixed(6) + ', ' + location.lng.toFixed(6);
 
                         // 添加到搜索历史
                         addToHistory({
@@ -1497,7 +1499,7 @@ export async function onRequest(context) {
                 } else {
                     // 如果AMap都没有，直接显示坐标
                     document.getElementById('locationAddress').textContent =
-                        \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+                        '坐标: ' + lat.toFixed(6) + ', ' + lng.toFixed(6);
                     document.getElementById('locationCoords').textContent = '地址解析失败';
                     showMessage('地址解析失败，但可以继续打卡', 'error');
                     document.getElementById('submitLocationBtn').disabled = false;
@@ -1519,7 +1521,7 @@ export async function onRequest(context) {
 
                         document.getElementById('locationAddress').textContent = address;
                         document.getElementById('locationCoords').textContent =
-                            \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+                            '坐标: ' + lat.toFixed(6) + ', ' + lng.toFixed(6);
 
                         showMessage('位置获取成功', 'success');
                     } else if (status === 'error') {
@@ -1535,12 +1537,12 @@ export async function onRequest(context) {
                         }
 
                         document.getElementById('locationAddress').textContent =
-                            \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+                            '坐标: ' + lat.toFixed(6) + ', ' + lng.toFixed(6);
                         document.getElementById('locationCoords').textContent = '地址解析失败: ' + result;
                     } else {
                         console.error('❌ 地理编码失败:', status, result);
                         document.getElementById('locationAddress').textContent =
-                            \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+                            '坐标: ' + lat.toFixed(6) + ', ' + lng.toFixed(6);
                         document.getElementById('locationCoords').textContent = '地址解析失败';
 
                         showMessage('地址解析失败，但可以继续打卡', 'error');
@@ -1552,7 +1554,7 @@ export async function onRequest(context) {
             } catch (error) {
                 console.error('地理编码异常:', error);
                 document.getElementById('locationAddress').textContent =
-                    \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+                    '坐标: ' + lat.toFixed(6) + ', ' + lng.toFixed(6);
                 document.getElementById('locationCoords').textContent = '地址解析异常';
                 showMessage('地址解析异常，但可以继续打卡', 'error');
                 document.getElementById('submitLocationBtn').disabled = false;
