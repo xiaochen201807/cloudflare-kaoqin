@@ -281,22 +281,98 @@ async function handleSubmitLocation(context, session) {
 
   try {
     const requestData = await request.json();
-    let data = { ...requestData };
 
-    // 添加用户信息到数据中
-    if (session) {
-      data.userId = session.user.id;
-      data.username = session.user.login;
+    // 构建符合n8n期望格式的数据
+    const currentDate = new Date().toISOString().split('T')[0]; // 格式: 2025-07-11
+    const coordinates = `${requestData.longitude},${requestData.latitude}`;
+
+    // 获取地址信息（如果前端没有提供）
+    let address = requestData.address || '位置信息获取中...';
+    let provinceCode = requestData.CLOCK_PROVINCE_CODE || '';
+    let provinceShort = requestData.CLOCK_PROVINCE_SHORT || '';
+    let cityCode = requestData.CLOCK_CITY_CODE || '';
+    let cityName = requestData.CLOCK_CITY_NAME || '';
+
+    // 如果没有地址信息，尝试通过高德地图API获取
+    if (!requestData.address) {
+      try {
+        const amapKey = env.AMAP_KEY || "caa6c37d36bdac64cf8d3e624fec3323";
+        const amapUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${amapKey}&location=${requestData.longitude},${requestData.latitude}&extensions=all&batch=false&roadlevel=0`;
+
+        const geoResponse = await fetch(amapUrl);
+        const geoData = await geoResponse.json();
+
+        if (geoData.status === "1" && geoData.regeocode) {
+          address = geoData.regeocode.formatted_address;
+          const addressComponent = geoData.regeocode.addressComponent;
+
+          if (addressComponent) {
+            // 省份代码映射（简化版本，可以根据需要扩展）
+            const provinceCodeMap = {
+              '北京市': '110000', '天津市': '120000', '河北省': '130000', '山西省': '140000',
+              '内蒙古自治区': '150000', '辽宁省': '210000', '吉林省': '220000', '黑龙江省': '230000',
+              '上海市': '310000', '江苏省': '320000', '浙江省': '330000', '安徽省': '340000',
+              '福建省': '350000', '江西省': '360000', '山东省': '370000', '河南省': '410000',
+              '湖北省': '420000', '湖南省': '430000', '广东省': '440000', '广西壮族自治区': '450000',
+              '海南省': '460000', '重庆市': '500000', '四川省': '510000', '贵州省': '520000',
+              '云南省': '530000', '西藏自治区': '540000', '陕西省': '610000', '甘肃省': '620000',
+              '青海省': '630000', '宁夏回族自治区': '640000', '新疆维吾尔自治区': '650000'
+            };
+
+            const provinceShortMap = {
+              '北京市': '京', '天津市': '津', '河北省': '冀', '山西省': '晋',
+              '内蒙古自治区': '蒙', '辽宁省': '辽', '吉林省': '吉', '黑龙江省': '黑',
+              '上海市': '沪', '江苏省': '苏', '浙江省': '浙', '安徽省': '皖',
+              '福建省': '闽', '江西省': '赣', '山东省': '鲁', '河南省': '豫',
+              '湖北省': '鄂', '湖南省': '湘', '广东省': '粤', '广西壮族自治区': '桂',
+              '海南省': '琼', '重庆市': '渝', '四川省': '川', '贵州省': '黔',
+              '云南省': '滇', '西藏自治区': '藏', '陕西省': '陕', '甘肃省': '甘',
+              '青海省': '青', '宁夏回族自治区': '宁', '新疆维吾尔自治区': '新'
+            };
+
+            provinceCode = provinceCodeMap[addressComponent.province] || '';
+            provinceShort = provinceShortMap[addressComponent.province] || '';
+
+            // 城市代码（简化处理，实际应该有完整的城市代码表）
+            if (addressComponent.citycode) {
+              cityCode = addressComponent.citycode;
+            }
+            cityName = addressComponent.city || addressComponent.district || '';
+          }
+        }
+      } catch (geoError) {
+        console.error('获取地址信息失败:', geoError);
+        // 如果获取地址失败，使用坐标作为地址
+        address = `${requestData.latitude.toFixed(6)}, ${requestData.longitude.toFixed(6)}`;
+      }
     }
+
+    // 构建符合n8n期望的数据格式
+    let data = {
+      name: requestData.realName || session?.user?.name || '未知用户',
+      longitude: requestData.longitude.toString(),
+      latitude: requestData.latitude.toString(),
+      address: address,
+      type: "check-in",
+      timestamp: currentDate,
+      CLOCK_COORDINATES: coordinates,
+      CLOCK_ADDRESS: address,
+      CLOCK_PROVINCE_CODE: provinceCode,
+      CLOCK_PROVINCE_SHORT: provinceShort,
+      CLOCK_CITY_CODE: cityCode,
+      CLOCK_CITY_NAME: cityName,
+      userId: session?.user?.id || 0,
+      username: session?.user?.login || 'unknown'
+    };
 
     // 选择合适的API端点
     let n8nEndpoint = env.N8N_API_ENDPOINT;
 
     // 如果是确认打卡模式，使用确认打卡API端点
-    if (data.confirmed === true && data.confirmData) {
+    if (requestData.confirmed === true && requestData.confirmData) {
       n8nEndpoint = env.N8N_API_CONFIRM_ENDPOINT;
       // 将确认数据合并到请求中
-      data = { ...data, ...data.confirmData };
+      data = { ...data, ...requestData.confirmData };
     }
 
     // 生成JWT令牌用于认证
