@@ -1057,54 +1057,99 @@ export async function onRequest(context) {
 
         // 检查API Key状态
         function checkApiKeyStatus() {
+            console.log('=== API Key 诊断信息 ===');
             console.log('当前使用的API Key:', '79a85def4762b3e9024547ee3b8b0e38');
             console.log('当前域名:', window.location.hostname);
             console.log('当前完整URL:', window.location.href);
+            console.log('当前协议:', window.location.protocol);
+            console.log('Referrer:', document.referrer);
+            console.log('User Agent:', navigator.userAgent);
 
-            // 尝试调用一个简单的API来测试Key状态
-            const testUrl = `https://restapi.amap.com/v3/config/district?key=79a85def4762b3e9024547ee3b8b0e38&keywords=中国&subdistrict=0`;
+            // 检查AMap对象状态
+            if (typeof AMap !== 'undefined') {
+                console.log('✅ AMap对象已加载');
+                console.log('AMap版本:', AMap.version || '未知');
+            } else {
+                console.log('❌ AMap对象未加载');
+            }
 
-            fetch(testUrl)
-                .then(response => response.json())
-                .then(data => {
-                    console.log('API Key测试结果:', data);
-                    if (data.status === '1') {
-                        console.log('✅ API Key有效');
-                    } else {
-                        console.log('❌ API Key问题:', data.info);
-                        showApiKeyError(data.info);
-                    }
-                })
-                .catch(error => {
-                    console.log('API Key测试失败:', error);
-                    console.log('可能是CORS问题，这是正常的');
-                });
+            // 尝试调用一个简单的API来测试Key状态（通过JSONP避免CORS）
+            const script = document.createElement('script');
+            const callbackName = 'amapKeyTest_' + Date.now();
+
+            window[callbackName] = function(data) {
+                console.log('API Key JSONP测试结果:', data);
+                if (data.status === '1') {
+                    console.log('✅ API Key REST API有效');
+                } else {
+                    console.log('❌ API Key REST API问题:', data.info);
+                }
+                document.head.removeChild(script);
+                delete window[callbackName];
+            };
+
+            script.src = `https://restapi.amap.com/v3/config/district?key=79a85def4762b3e9024547ee3b8b0e38&keywords=中国&subdistrict=0&callback=${callbackName}`;
+            script.onerror = function() {
+                console.log('JSONP测试失败，可能是网络问题');
+                document.head.removeChild(script);
+                delete window[callbackName];
+            };
+            document.head.appendChild(script);
         }
 
         // 显示API Key错误信息
         function showApiKeyError(errorInfo = '') {
             const currentDomain = window.location.hostname;
+
+            // 尝试解析错误代码
+            let errorDetails = null;
+            if (errorInfo.includes('INVALID_USER_SCODE')) {
+                errorDetails = explainAmapError('INVALID_USER_SCODE');
+            } else if (errorInfo) {
+                // 尝试从错误信息中提取错误代码
+                const errorMatch = errorInfo.match(/([A-Z_]+)/);
+                if (errorMatch) {
+                    errorDetails = explainAmapError(errorMatch[1]);
+                }
+            }
+
             const errorHtml = \`
-                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px; color: #856404;">
-                    <h3>🔑 地图服务配置问题</h3>
-                    <p><strong>当前域名：</strong>\${currentDomain}</p>
-                    <p><strong>API Key：</strong>79a85def4762b3e9024547ee3b8b0e38</p>
-                    \${errorInfo ? \`<p><strong>错误信息：</strong>\${errorInfo}</p>\` : ''}
-                    <p><strong>可能原因：</strong></p>
-                    <ul>
-                        <li>域名 <code>\${currentDomain}</code> 未添加到白名单</li>
-                        <li>API配额已用完（个人版每日10万次）</li>
-                        <li>所需服务未开通（地理编码、POI搜索等）</li>
-                        <li>Key已过期或被禁用</li>
-                    </ul>
-                    <p><strong>解决步骤：</strong></p>
-                    <ol>
-                        <li>登录 <a href="https://console.amap.com/dev/key" target="_blank">高德开放平台控制台</a></li>
-                        <li>检查Key状态和配额使用情况</li>
-                        <li>在白名单中添加域名：<code>\${currentDomain}</code></li>
-                        <li>确认已开通：Web服务API、地理编码、逆地理编码、搜索POI</li>
-                    </ol>
-                    <p><em>详细说明请查看项目中的"高德地图API申请指南.md"文件</em></p>
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px; color: #856404; max-height: 400px; overflow-y: auto;">
+                    <h3>🔑 高德地图API配置问题</h3>
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                        <p><strong>当前域名：</strong><code>\${currentDomain}</code></p>
+                        <p><strong>API Key：</strong><code>79a85def4762b3e9024547ee3b8b0e38</code></p>
+                        <p><strong>错误信息：</strong><code>\${errorInfo || '未知错误'}</code></p>
+                    </div>
+
+                    \${errorDetails ? \`
+                    <div style="margin: 15px 0;">
+                        <h4>📋 错误分析：\${errorDetails.name}</h4>
+                        <p><strong>可能原因：</strong></p>
+                        <ul>
+                            \${errorDetails.reasons.map(reason => \`<li>\${reason}</li>\`).join('')}
+                        </ul>
+                        <p><strong>解决方案：</strong></p>
+                        <ol>
+                            \${errorDetails.solutions.map(solution => \`<li>\${solution}</li>\`).join('')}
+                        </ol>
+                    </div>
+                    \` : \`
+                    <div style="margin: 15px 0;">
+                        <p><strong>通用解决步骤：</strong></p>
+                        <ol>
+                            <li>登录 <a href="https://console.amap.com/dev/key" target="_blank">高德开放平台控制台</a></li>
+                            <li>检查Key状态和配额使用情况</li>
+                            <li>确认白名单配置（当前显示"无限制"应该是正常的）</li>
+                            <li>确认已开通：Web服务API、地理编码、逆地理编码、搜索POI</li>
+                        </ol>
+                    </div>
+                    \`}
+
+                    <div style="background: #e3f2fd; padding: 10px; border-radius: 4px; margin-top: 15px;">
+                        <p><strong>💡 调试建议：</strong></p>
+                        <p>请打开浏览器控制台(F12)查看详细的诊断信息，包括API Key测试结果。</p>
+                    </div>
                 </div>
             \`;
 
@@ -1113,6 +1158,55 @@ export async function onRequest(context) {
             if (mapContainer) {
                 mapContainer.innerHTML = errorHtml;
             }
+        }
+
+        // 解释高德地图错误代码
+        function explainAmapError(errorCode) {
+            const errorMap = {
+                'INVALID_USER_SCODE': {
+                    name: 'API Key无效',
+                    reasons: [
+                        'API Key不存在或格式错误',
+                        'API Key已被禁用或删除',
+                        'API Key配额已用完',
+                        '请求来源不在白名单中',
+                        'API Key对应的服务未开通'
+                    ],
+                    solutions: [
+                        '检查API Key是否正确',
+                        '确认API Key状态正常',
+                        '查看配额使用情况',
+                        '检查白名单配置',
+                        '确认服务开通状态'
+                    ]
+                },
+                'INVALID_USER_KEY': {
+                    name: 'Key格式错误',
+                    reasons: ['API Key格式不正确'],
+                    solutions: ['检查Key是否完整且格式正确']
+                },
+                'USER_KEY_PLAT_NOMATCH': {
+                    name: '平台不匹配',
+                    reasons: ['Key的平台设置与当前使用平台不匹配'],
+                    solutions: ['确认Key设置为Web端(JS API)平台']
+                },
+                'IP_QUERY_OVER_LIMIT': {
+                    name: 'IP访问超限',
+                    reasons: ['单个IP访问次数超过限制'],
+                    solutions: ['等待限制重置或升级配额']
+                },
+                'DAILY_QUERY_OVER_LIMIT': {
+                    name: '日配额超限',
+                    reasons: ['日调用量超过配额限制'],
+                    solutions: ['等待次日重置或购买更多配额']
+                }
+            };
+
+            return errorMap[errorCode] || {
+                name: '未知错误',
+                reasons: ['未知的错误代码: ' + errorCode],
+                solutions: ['请查看高德地图API文档或联系技术支持']
+            };
         }
 
         // 加载用户信息
@@ -1376,17 +1470,37 @@ export async function onRequest(context) {
             try {
                 // 使用高德地图Geocoder服务
                 geocoder.getAddress([lng, lat], function(status, result) {
-                    console.log('地理编码结果:', status, result);
+                    console.log('=== 地理编码详细结果 ===');
+                    console.log('状态:', status);
+                    console.log('结果:', result);
+                    console.log('坐标:', [lng, lat]);
 
                     if (status === 'complete' && result.regeocode) {
                         const address = result.regeocode.formattedAddress;
+                        console.log('✅ 地理编码成功:', address);
+
                         document.getElementById('locationAddress').textContent = address;
                         document.getElementById('locationCoords').textContent =
                             \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
 
                         showMessage('位置获取成功', 'success');
+                    } else if (status === 'error') {
+                        console.error('❌ 地理编码API错误:', result);
+
+                        if (result === 'INVALID_USER_SCODE') {
+                            console.error('API Key问题 - INVALID_USER_SCODE');
+                            showMessage('API Key配置问题，请检查控制台', 'error');
+                            showApiKeyError('地理编码服务返回 INVALID_USER_SCODE');
+                        } else {
+                            console.error('其他地理编码错误:', result);
+                            showMessage('地址解析失败: ' + result, 'error');
+                        }
+
+                        document.getElementById('locationAddress').textContent =
+                            \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+                        document.getElementById('locationCoords').textContent = '地址解析失败: ' + result;
                     } else {
-                        console.error('地理编码失败:', status, result);
+                        console.error('❌ 地理编码失败:', status, result);
                         document.getElementById('locationAddress').textContent =
                             \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
                         document.getElementById('locationCoords').textContent = '地址解析失败';
