@@ -561,6 +561,15 @@ export async function onRequest(context) {
             background: #5a67d8;
         }
 
+        /* 坐标定位区域 */
+        .coord-section {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
         .coord-input-container {
             display: flex;
             gap: 8px;
@@ -583,10 +592,26 @@ export async function onRequest(context) {
             border-radius: 4px;
             cursor: pointer;
             font-size: 12px;
+            font-weight: 600;
         }
 
         .coord-btn:hover {
             background: #218838;
+            transform: translateY(-1px);
+        }
+
+        .current-coords {
+            margin-top: 8px;
+            padding: 6px 8px;
+            background: rgba(40, 167, 69, 0.1);
+            border-radius: 4px;
+            border-left: 3px solid #28a745;
+        }
+
+        .current-coords small {
+            color: #28a745;
+            font-weight: 500;
+            font-family: monospace;
         }
 
         /* 打卡面板内容 */
@@ -626,6 +651,10 @@ export async function onRequest(context) {
         /* 历史记录和收藏 */
         .history-section {
             margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
         }
 
         .section-title {
@@ -636,6 +665,8 @@ export async function onRequest(context) {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #e0e0e0;
         }
 
         .clear-btn {
@@ -653,25 +684,29 @@ export async function onRequest(context) {
         }
 
         .history-list, .favorite-list {
-            max-height: 120px;
+            max-height: 150px;
             overflow-y: auto;
             border: 1px solid #e0e0e0;
             border-radius: 6px;
             background: white;
+            margin-top: 8px;
         }
 
         .history-item, .favorite-item {
-            padding: 8px 12px;
+            padding: 10px 12px;
             border-bottom: 1px solid #f0f0f0;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: space-between;
             font-size: 0.85em;
+            transition: all 0.2s ease;
         }
 
         .history-item:hover, .favorite-item:hover {
             background: #f8f9fa;
+            transform: translateX(2px);
+            border-left: 3px solid #667eea;
         }
 
         .history-item:last-child, .favorite-item:last-child {
@@ -873,10 +908,20 @@ export async function onRequest(context) {
                     <button class="search-btn" onclick="searchLocation()">🔍</button>
                 </div>
 
-                <div class="coord-input-container">
-                    <input type="number" id="latInput" class="coord-input" placeholder="纬度" step="any" />
-                    <input type="number" id="lngInput" class="coord-input" placeholder="经度" step="any" />
-                    <button class="coord-btn" onclick="gotoCoordinates()">定位</button>
+                <!-- 坐标定位区域 -->
+                <div class="coord-section">
+                    <div class="section-title">
+                        📍 坐标定位
+                        <button class="clear-btn" onclick="getCurrentCoordinates()" title="获取当前坐标">获取</button>
+                    </div>
+                    <div class="coord-input-container">
+                        <input type="number" id="latInput" class="coord-input" placeholder="纬度" step="any" />
+                        <input type="number" id="lngInput" class="coord-input" placeholder="经度" step="any" />
+                        <button class="coord-btn" onclick="gotoCoordinates()">定位坐标</button>
+                    </div>
+                    <div class="current-coords" id="currentCoords">
+                        <small>当前坐标: 获取中...</small>
+                    </div>
                 </div>
 
                 <!-- 搜索历史 -->
@@ -1300,6 +1345,9 @@ export async function onRequest(context) {
 
                         // 获取地址信息
                         getAddressFromCoords(currentLocation.latitude, currentLocation.longitude);
+
+                        // 更新坐标显示
+                        updateCurrentCoordsDisplay();
                     },
                     function(error) {
                         console.error('获取位置失败:', error);
@@ -1597,7 +1645,29 @@ export async function onRequest(context) {
             // 获取地址信息
             getAddressFromCoords(lat, lng);
 
+            // 更新当前坐标显示
+            updateCurrentCoordsDisplay();
+
             showMessage('定位成功', 'success');
+        }
+
+        // 获取当前坐标
+        function getCurrentCoordinates() {
+            if (currentLocation) {
+                document.getElementById('latInput').value = currentLocation.latitude.toFixed(6);
+                document.getElementById('lngInput').value = currentLocation.longitude.toFixed(6);
+                showMessage('已获取当前坐标', 'success');
+            } else {
+                showMessage('请先获取位置信息', 'error');
+            }
+        }
+
+        // 更新当前坐标显示
+        function updateCurrentCoordsDisplay() {
+            const coordsElement = document.getElementById('currentCoords');
+            if (currentLocation && coordsElement) {
+                coordsElement.innerHTML = `<small>当前坐标: ${currentLocation.latitude.toFixed(6)}, ${currentLocation.longitude.toFixed(6)}</small>`;
+            }
         }
 
         // 刷新位置
