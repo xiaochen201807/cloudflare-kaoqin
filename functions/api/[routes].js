@@ -184,6 +184,11 @@ export async function onRequest(context) {
     return handleGeocode(context);
   }
 
+  // 处理测试地理编码API
+  if (path === "/api/test-geocode" && request.method === "GET") {
+    return handleTestGeocode(context);
+  }
+
   // 处理签到API（兼容旧版本）
   if (path === "/api/checkin" && request.method === "POST") {
     return handleSubmitLocation(context, session);
@@ -299,15 +304,30 @@ async function handleSubmitLocation(context, session) {
         const amapKey = env.AMAP_KEY || "caa6c37d36bdac64cf8d3e624fec3323";
         const amapUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${amapKey}&location=${requestData.longitude},${requestData.latitude}&extensions=all&batch=false&roadlevel=0`;
 
+        console.log('调用高德地图API:', amapUrl);
+        console.log('使用的API Key:', amapKey.substring(0, 8) + '...');
+
         const geoResponse = await fetch(amapUrl);
+
+        if (!geoResponse.ok) {
+          console.error('高德地图API HTTP错误:', geoResponse.status, geoResponse.statusText);
+          throw new Error(`HTTP ${geoResponse.status}: ${geoResponse.statusText}`);
+        }
+
         const geoData = await geoResponse.json();
 
-        console.log('高德地图API响应:', JSON.stringify(geoData, null, 2));
+        console.log('高德地图API响应状态:', geoData.status);
+        console.log('高德地图API完整响应:', JSON.stringify(geoData, null, 2));
 
         if (geoData.status === "1" && geoData.regeocode) {
+          console.log('高德地图API调用成功');
+
           // 如果前端没有提供地址，使用API返回的地址
           if (!requestData.address) {
             address = geoData.regeocode.formatted_address;
+            console.log('使用API返回的地址:', address);
+          } else {
+            console.log('使用前端提供的地址:', address);
           }
 
           const addressComponent = geoData.regeocode.addressComponent;
@@ -359,7 +379,17 @@ async function handleSubmitLocation(context, session) {
             console.log('地址组件为空');
           }
         } else {
-          console.log('高德地图API返回错误或无数据:', geoData);
+          console.log('高德地图API返回错误或无数据:');
+          console.log('- status:', geoData.status);
+          console.log('- info:', geoData.info);
+          console.log('- infocode:', geoData.infocode);
+
+          if (geoData.status === "0") {
+            console.error('高德地图API错误:', geoData.info || '未知错误');
+            if (geoData.infocode === "INVALID_USER_SCODE") {
+              console.error('API Key无效或安全码错误');
+            }
+          }
         }
     } catch (geoError) {
         console.error('获取地址信息失败:', geoError);
@@ -765,6 +795,43 @@ function handleHealthCheck(context) {
   const statusCode = allChecksPass ? 200 : 503;
 
   return createSuccessResponse(healthStatus, statusCode);
+}
+
+// 处理测试地理编码API
+async function handleTestGeocode(context) {
+  const { request, env } = context;
+  const url = new URL(request.url);
+
+  // 使用固定的武汉坐标进行测试
+  const testLat = url.searchParams.get('lat') || '30.597264';
+  const testLng = url.searchParams.get('lng') || '114.300951';
+
+  try {
+    const amapKey = env.AMAP_KEY || "caa6c37d36bdac64cf8d3e624fec3323";
+    const amapUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${amapKey}&location=${testLng},${testLat}&extensions=all&batch=false&roadlevel=0`;
+
+    console.log('测试地理编码URL:', amapUrl);
+
+    const response = await fetch(amapUrl);
+    const data = await response.json();
+
+    console.log('高德地图API完整响应:', JSON.stringify(data, null, 2));
+
+    return createSuccessResponse({
+      testCoordinates: { lat: testLat, lng: testLng },
+      amapUrl: amapUrl,
+      amapResponse: data,
+      analysis: {
+        status: data.status,
+        hasRegeocode: !!data.regeocode,
+        hasAddressComponent: !!(data.regeocode && data.regeocode.addressComponent),
+        addressComponent: data.regeocode ? data.regeocode.addressComponent : null
+      }
+    });
+  } catch (error) {
+    console.error('测试地理编码失败:', error);
+    return createErrorResponse("测试地理编码失败: " + error.message, 500);
+  }
 }
 
 // 处理地理编码API（获取地址信息）
