@@ -452,7 +452,7 @@ export async function onRequest(context) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>考勤打卡系统</title>
     <script type="text/javascript" src="config/map-config.js"></script>
-    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=a7a90e05a37d3f6bf76d4a9032fc9129"></script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=79a85def4762b3e9024547ee3b8b0e38"></script>
     <style>
         * {
             margin: 0;
@@ -964,6 +964,7 @@ export async function onRequest(context) {
             loadUserInfo();
             loadStoredData();
             setupEventListeners();
+            checkApiKeyStatus();
 
             // 延迟初始化地图，确保DOM完全渲染
             setTimeout(function() {
@@ -1054,19 +1055,55 @@ export async function onRequest(context) {
             }
         }
 
+        // 检查API Key状态
+        function checkApiKeyStatus() {
+            console.log('当前使用的API Key:', '79a85def4762b3e9024547ee3b8b0e38');
+            console.log('当前域名:', window.location.hostname);
+            console.log('当前完整URL:', window.location.href);
+
+            // 尝试调用一个简单的API来测试Key状态
+            const testUrl = `https://restapi.amap.com/v3/config/district?key=79a85def4762b3e9024547ee3b8b0e38&keywords=中国&subdistrict=0`;
+
+            fetch(testUrl)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('API Key测试结果:', data);
+                    if (data.status === '1') {
+                        console.log('✅ API Key有效');
+                    } else {
+                        console.log('❌ API Key问题:', data.info);
+                        showApiKeyError(data.info);
+                    }
+                })
+                .catch(error => {
+                    console.log('API Key测试失败:', error);
+                    console.log('可能是CORS问题，这是正常的');
+                });
+        }
+
         // 显示API Key错误信息
-        function showApiKeyError() {
+        function showApiKeyError(errorInfo = '') {
+            const currentDomain = window.location.hostname;
             const errorHtml = \`
                 <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px; color: #856404;">
                     <h3>🔑 地图服务配置问题</h3>
-                    <p><strong>错误原因：</strong>高德地图API Key无效或配额已用完</p>
-                    <p><strong>解决方案：</strong></p>
+                    <p><strong>当前域名：</strong>\${currentDomain}</p>
+                    <p><strong>API Key：</strong>79a85def4762b3e9024547ee3b8b0e38</p>
+                    \${errorInfo ? \`<p><strong>错误信息：</strong>\${errorInfo}</p>\` : ''}
+                    <p><strong>可能原因：</strong></p>
+                    <ul>
+                        <li>域名 <code>\${currentDomain}</code> 未添加到白名单</li>
+                        <li>API配额已用完（个人版每日10万次）</li>
+                        <li>所需服务未开通（地理编码、POI搜索等）</li>
+                        <li>Key已过期或被禁用</li>
+                    </ul>
+                    <p><strong>解决步骤：</strong></p>
                     <ol>
-                        <li>申请新的高德地图API Key</li>
-                        <li>检查域名白名单设置</li>
-                        <li>确认API配额是否充足</li>
+                        <li>登录 <a href="https://console.amap.com/dev/key" target="_blank">高德开放平台控制台</a></li>
+                        <li>检查Key状态和配额使用情况</li>
+                        <li>在白名单中添加域名：<code>\${currentDomain}</code></li>
+                        <li>确认已开通：Web服务API、地理编码、逆地理编码、搜索POI</li>
                     </ol>
-                    <p><strong>申请地址：</strong><a href="https://console.amap.com/dev/key" target="_blank">高德开放平台控制台</a></p>
                     <p><em>详细说明请查看项目中的"高德地图API申请指南.md"文件</em></p>
                 </div>
             \`;
