@@ -935,7 +935,8 @@ export async function onRequest(context) {
         let locationMarker = null;
         let searchHistory = [];
         let favoriteLocations = [];
-        let searchService = null;
+        let placeSearch = null;
+        let geocoder = null;
 
         // 页面加载时初始化
         document.addEventListener('DOMContentLoaded', function() {
@@ -960,12 +961,17 @@ export async function onRequest(context) {
             map.addControl(new AMap.Scale());
             map.addControl(new AMap.ToolBar());
 
-            // 初始化搜索服务
-            AMap.plugin('AMap.PlaceSearch', function() {
-                searchService = new AMap.PlaceSearch({
+            // 初始化搜索服务和地理编码服务
+            AMap.plugin(['AMap.PlaceSearch', 'AMap.Geocoder'], function() {
+                placeSearch = new AMap.PlaceSearch({
                     pageSize: 10,
                     pageIndex: 1,
                     city: '全国'
+                });
+
+                geocoder = new AMap.Geocoder({
+                    city: '全国',
+                    radius: 1000
                 });
             });
         }
@@ -1123,45 +1129,34 @@ export async function onRequest(context) {
         }
 
         // 搜索位置
-        async function searchLocation() {
+        function searchLocation() {
             const keyword = document.getElementById('searchInput').value.trim();
             if (!keyword) {
                 showMessage('请输入搜索关键词', 'error');
                 return;
             }
 
+            if (!placeSearch) {
+                showMessage('搜索服务未初始化', 'error');
+                return;
+            }
+
             showMessage('正在搜索...', 'info');
 
-            try {
-                // 直接使用高德地图Web API
-                const searchUrl = \`https://restapi.amap.com/v3/place/text?key=79a85def4762b3e9024547ee3b8b0e38&keywords=\${encodeURIComponent(keyword)}&city=全国&output=json&offset=10&page=1&extensions=base\`;
-
-                const response = await fetch(searchUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    mode: 'cors'
-                });
-
-                if (!response.ok) {
-                    throw new Error('搜索请求失败');
-                }
-
-                const data = await response.json();
-
-                if (data.status === '1' && data.pois && data.pois.length > 0) {
-                    const poi = data.pois[0]; // 取第一个结果
-                    const [lng, lat] = poi.location.split(',').map(parseFloat);
+            // 使用高德地图PlaceSearch服务
+            placeSearch.search(keyword, function(status, result) {
+                if (status === 'complete' && result.poiList && result.poiList.pois.length > 0) {
+                    const poi = result.poiList.pois[0]; // 取第一个结果
+                    const location = poi.location;
 
                     // 更新地图位置
-                    map.setCenter([lng, lat]);
+                    map.setCenter([location.lng, location.lat]);
                     map.setZoom(16);
 
                     // 更新当前位置
                     currentLocation = {
-                        latitude: lat,
-                        longitude: lng
+                        latitude: location.lat,
+                        longitude: location.lng
                     };
 
                     // 更新位置标记
@@ -1170,14 +1165,14 @@ export async function onRequest(context) {
                     // 更新位置信息显示
                     document.getElementById('locationAddress').textContent = poi.name + ' - ' + poi.address;
                     document.getElementById('locationCoords').textContent =
-                        \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+                        \`坐标: \${location.lat.toFixed(6)}, \${location.lng.toFixed(6)}\`;
 
                     // 添加到搜索历史
                     addToHistory({
                         name: poi.name,
                         address: poi.address,
-                        lat: lat,
-                        lng: lng,
+                        lat: location.lat,
+                        lng: location.lng,
                         timestamp: new Date().toISOString()
                     });
 
@@ -1188,56 +1183,42 @@ export async function onRequest(context) {
                 } else {
                     showMessage('未找到相关位置', 'error');
                 }
-            } catch (error) {
-                console.error('搜索错误:', error);
-                showMessage('搜索失败，请稍后重试', 'error');
-            }
+            });
         }
 
         // 使用高德地图API获取地址
-        async function getAddressFromCoords(lat, lng) {
-            try {
-                // 直接使用高德地图逆地理编码API
-                const geocodeUrl = \`https://restapi.amap.com/v3/geocode/regeo?key=79a85def4762b3e9024547ee3b8b0e38&location=\${lng},\${lat}&poitype=&radius=1000&extensions=base&batch=false&roadlevel=0\`;
+        function getAddressFromCoords(lat, lng) {
+            if (!geocoder) {
+                console.error('地理编码服务未初始化');
+                document.getElementById('locationAddress').textContent =
+                    \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+                document.getElementById('locationCoords').textContent = '地址解析失败';
+                showMessage('地址解析失败，但可以继续打卡', 'error');
+                document.getElementById('submitLocationBtn').disabled = false;
+                return;
+            }
 
-                const response = await fetch(geocodeUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    mode: 'cors'
-                });
-
-                if (!response.ok) {
-                    throw new Error('地理编码请求失败');
-                }
-
-                const data = await response.json();
-
-                if (data.status === '1' && data.regeocode) {
-                    const address = data.regeocode.formatted_address || '未知地址';
+            // 使用高德地图Geocoder服务
+            geocoder.getAddress([lng, lat], function(status, result) {
+                if (status === 'complete' && result.regeocode) {
+                    const address = result.regeocode.formattedAddress;
                     document.getElementById('locationAddress').textContent = address;
                     document.getElementById('locationCoords').textContent =
                         \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
 
                     showMessage('位置获取成功', 'success');
                 } else {
-                    throw new Error('地址解析失败');
+                    console.error('地理编码失败:', result);
+                    document.getElementById('locationAddress').textContent =
+                        \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+                    document.getElementById('locationCoords').textContent = '地址解析失败';
+
+                    showMessage('地址解析失败，但可以继续打卡', 'error');
                 }
 
                 // 启用提交按钮
                 document.getElementById('submitLocationBtn').disabled = false;
-            } catch (error) {
-                console.error('获取地址失败:', error);
-                document.getElementById('locationAddress').textContent =
-                    \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
-                document.getElementById('locationCoords').textContent = '地址解析失败';
-
-                showMessage('地址解析失败，但可以继续打卡', 'error');
-
-                // 即使获取地址失败，也允许提交
-                document.getElementById('submitLocationBtn').disabled = false;
-            }
+            });
         }
 
         // 根据坐标定位

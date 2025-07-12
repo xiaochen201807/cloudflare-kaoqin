@@ -739,6 +739,61 @@ async function handleGeocode(context) {
   }
 }
 
+// 处理搜索API
+async function handleSearch(context) {
+  const { request, env } = context;
+  const url = new URL(request.url);
+
+  // 获取查询参数
+  const keyword = url.searchParams.get('keyword');
+
+  if (!keyword || keyword.trim() === '') {
+    return createErrorResponse("缺少必需的参数: keyword", 400);
+  }
+
+  try {
+    // 使用高德地图搜索API
+    const amapKey = env.AMAP_KEY || "79a85def4762b3e9024547ee3b8b0e38";
+    const searchUrl = `https://restapi.amap.com/v3/place/text?key=${amapKey}&keywords=${encodeURIComponent(keyword.trim())}&city=全国&output=json&offset=10&page=1&extensions=base`;
+
+    const response = await fetch(searchUrl);
+    const data = await response.json();
+
+    if (data.status === "1" && data.pois && data.pois.length > 0) {
+      // 成功获取搜索结果
+      const results = data.pois.map(poi => {
+        const [lng, lat] = poi.location.split(',').map(parseFloat);
+        return {
+          name: poi.name,
+          address: poi.address,
+          location: {
+            lat: lat,
+            lng: lng
+          },
+          type: poi.type,
+          typecode: poi.typecode
+        };
+      });
+
+      return createSuccessResponse({
+        results: results,
+        total: data.count || results.length
+      });
+    } else {
+      // 高德API返回错误或无结果
+      console.error("高德地图搜索API错误:", data);
+      return createSuccessResponse({
+        results: [],
+        total: 0,
+        error: "未找到相关位置"
+      });
+    }
+  } catch (error) {
+    console.error("搜索请求失败:", error);
+    return createErrorResponse("搜索服务暂时不可用", 500);
+  }
+}
+
 // 处理调试信息
 function handleDebug(context, session) {
   const { request, env } = context;
