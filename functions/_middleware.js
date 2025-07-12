@@ -1666,7 +1666,7 @@ export async function onRequest(context) {
         function updateCurrentCoordsDisplay() {
             const coordsElement = document.getElementById('currentCoords');
             if (currentLocation && coordsElement) {
-                coordsElement.innerHTML = `<small>当前坐标: ${currentLocation.latitude.toFixed(6)}, ${currentLocation.longitude.toFixed(6)}</small>`;
+                coordsElement.innerHTML = '<small>当前坐标: ' + currentLocation.latitude.toFixed(6) + ', ' + currentLocation.longitude.toFixed(6) + '</small>';
             }
         }
 
@@ -1795,19 +1795,19 @@ export async function onRequest(context) {
                 return;
             }
 
-            historyList.innerHTML = searchHistory.map((item, index) => \`
+            historyList.innerHTML = searchHistory.map((item, index) => `
                 <div class="history-item">
-                    <div class="item-text" title="\${item.name} - \${item.address}">
-                        <strong>\${item.name}</strong><br>
-                        <small>\${item.address}</small>
+                    <div class="item-text" title="${item.name} - ${item.address}">
+                        <strong>${item.name}</strong><br>
+                        <small>${item.address}</small>
                     </div>
                     <div class="item-actions">
-                        <button class="action-btn favorite-btn" onclick="addToFavorites(searchHistory[\${index}])" title="收藏">⭐</button>
-                        <button class="action-btn goto-btn" onclick="gotoLocation(\${item.lat}, \${item.lng})" title="定位">📍</button>
-                        <button class="action-btn remove-btn" onclick="removeFromHistory(\${index})" title="删除">×</button>
+                        <button class="action-btn favorite-btn" onclick="addToFavorites(searchHistory[${index}])" title="收藏">⭐</button>
+                        <button class="action-btn goto-btn" onclick="gotoLocation(${item.lat}, ${item.lng})" title="定位">📍</button>
+                        <button class="action-btn remove-btn" onclick="removeFromHistory(${index})" title="删除">×</button>
                     </div>
                 </div>
-            \`).join('');
+            `).join('');
         }
 
         // 更新收藏显示
@@ -1819,18 +1819,18 @@ export async function onRequest(context) {
                 return;
             }
 
-            favoriteList.innerHTML = favoriteLocations.map((item, index) => \`
+            favoriteList.innerHTML = favoriteLocations.map((item, index) => `
                 <div class="favorite-item">
-                    <div class="item-text" title="\${item.name} - \${item.address}">
-                        <strong>\${item.name}</strong><br>
-                        <small>\${item.address}</small>
+                    <div class="item-text" title="${item.name} - ${item.address}">
+                        <strong>${item.name}</strong><br>
+                        <small>${item.address}</small>
                     </div>
                     <div class="item-actions">
-                        <button class="action-btn goto-btn" onclick="gotoLocation(\${item.lat}, \${item.lng})" title="定位">📍</button>
-                        <button class="action-btn remove-btn" onclick="removeFromFavorites(\${index})" title="删除">×</button>
+                        <button class="action-btn goto-btn" onclick="gotoLocation(${item.lat}, ${item.lng})" title="定位">📍</button>
+                        <button class="action-btn remove-btn" onclick="removeFromFavorites(${index})" title="删除">×</button>
                     </div>
                 </div>
-            \`).join('');
+            `).join('');
         }
 
         // 跳转到指定位置
