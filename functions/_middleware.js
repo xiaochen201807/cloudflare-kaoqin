@@ -452,7 +452,13 @@ export async function onRequest(context) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>考勤打卡系统</title>
     <script type="text/javascript" src="config/map-config.js"></script>
-    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=caa6c37d36bdac64cf8d3e624fec3323"></script>
+    <script type="text/javascript">
+        window._AMapSecurityConfig = {
+            securityJsCode: "f1a08e21c881331769a88b1d52ed85a0", // daka-cloudflare项目安全密钥
+            serviceHost: '/_AMapService' // 服务代理配置
+        };
+    </script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=caa6c37d36bdac64cf8d3e624fec3323&plugin=AMap.PlaceSearch,AMap.ToolBar,AMap.Scale,AMap.Geocoder,AMap.Geolocation"></script>
     <style>
         * {
             margin: 0;
@@ -988,56 +994,88 @@ export async function onRequest(context) {
 
                 console.log('开始初始化地图...');
 
-                // 创建地图实例
+                // 创建地图实例 (高德地图2.0版本)
                 map = new AMap.Map('mapContainer', {
                     zoom: 15,
                     center: [116.397428, 39.90923], // 默认中心点（北京）
                     mapStyle: 'amap://styles/normal',
-                    viewMode: '2D'
+                    viewMode: '2D',
+                    resizeEnable: true,
+                    rotateEnable: true,
+                    pitchEnable: true,
+                    buildingAnimation: true
                 });
 
                 console.log('地图实例创建成功');
 
-                // 添加地图控件 - 使用插件方式加载
-                AMap.plugin(['AMap.Scale', 'AMap.ToolBar'], function() {
+                // 添加地图控件 (高德地图2.0版本，插件已预加载)
+                try {
                     map.addControl(new AMap.Scale());
                     map.addControl(new AMap.ToolBar());
                     console.log('地图控件加载完成');
-                });
+                } catch (error) {
+                    console.error('地图控件加载失败:', error);
+                    // 如果直接加载失败，尝试插件方式
+                    AMap.plugin(['AMap.Scale', 'AMap.ToolBar'], function() {
+                        map.addControl(new AMap.Scale());
+                        map.addControl(new AMap.ToolBar());
+                        console.log('地图控件插件方式加载完成');
+                    });
+                }
 
                 // 地图加载完成事件
                 map.on('complete', function() {
                     console.log('地图加载完成');
 
-                    // 初始化所有需要的插件
-                    AMap.plugin([
-                        'AMap.PlaceSearch',
-                        'AMap.Geocoder',
-                        'AMap.Geolocation'
-                    ], function() {
+                    // 高德地图2.0版本，插件已预加载，直接初始化服务
+                    try {
                         console.log('开始初始化搜索和地理编码服务...');
 
-                        try {
-                            placeSearch = new AMap.PlaceSearch({
-                                pageSize: 10,
-                                pageIndex: 1,
-                                city: '全国',
-                                map: map,
-                                autoFitView: true
-                            });
+                        placeSearch = new AMap.PlaceSearch({
+                            pageSize: 10,
+                            pageIndex: 1,
+                            city: '全国',
+                            map: map,
+                            autoFitView: true
+                        });
 
-                            geocoder = new AMap.Geocoder({
-                                city: '全国',
-                                radius: 1000
-                            });
+                        geocoder = new AMap.Geocoder({
+                            city: '全国',
+                            radius: 1000
+                        });
 
-                            console.log('搜索和地理编码服务初始化完成');
-                            console.log('PlaceSearch:', placeSearch);
-                            console.log('Geocoder:', geocoder);
-                        } catch (error) {
-                            console.error('服务初始化失败:', error);
-                        }
-                    });
+                        console.log('搜索和地理编码服务初始化完成');
+                        console.log('PlaceSearch:', placeSearch);
+                        console.log('Geocoder:', geocoder);
+                    } catch (error) {
+                        console.error('服务初始化失败，尝试插件方式加载:', error);
+
+                        // 如果直接初始化失败，尝试插件方式
+                        AMap.plugin([
+                            'AMap.PlaceSearch',
+                            'AMap.Geocoder',
+                            'AMap.Geolocation'
+                        ], function() {
+                            try {
+                                placeSearch = new AMap.PlaceSearch({
+                                    pageSize: 10,
+                                    pageIndex: 1,
+                                    city: '全国',
+                                    map: map,
+                                    autoFitView: true
+                                });
+
+                                geocoder = new AMap.Geocoder({
+                                    city: '全国',
+                                    radius: 1000
+                                });
+
+                                console.log('插件方式服务初始化完成');
+                            } catch (pluginError) {
+                                console.error('插件方式服务初始化也失败:', pluginError);
+                            }
+                        });
+                    }
                 });
 
                 // 地图加载失败事件

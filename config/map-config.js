@@ -3,6 +3,9 @@ const MAP_CONFIG = {
     // 高德地图API Key
     // 请在高德开放平台申请：https://console.amap.com/dev/key
     AMAP_KEY: 'caa6c37d36bdac64cf8d3e624fec3323', // daka-cloudflare项目专用Key
+
+    // 高德地图安全密钥
+    AMAP_SECURITY_CODE: 'f1a08e21c881331769a88b1d52ed85a0', // daka-cloudflare项目安全密钥
     
     // 地图版本
     AMAP_VERSION: '1.4.15',
