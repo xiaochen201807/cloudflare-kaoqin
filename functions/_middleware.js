@@ -451,7 +451,7 @@ export async function onRequest(context) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>考勤打卡系统</title>
-    <script type="text/javascript" src="config/map-config.js"></script>
+    <!-- 配置文件已内联，无需外部引用 -->
     <script type="text/javascript">
         window._AMapSecurityConfig = {
             securityJsCode: "f1a08e21c881331769a88b1d52ed85a0", // daka-cloudflare项目安全密钥
@@ -1120,7 +1120,12 @@ export async function onRequest(context) {
                 if (data.status === '1') {
                     console.log('✅ API Key REST API有效');
                 } else {
-                    console.log('❌ API Key REST API问题:', data.info);
+                    // USERKEY_PLAT_NOMATCH 通常不影响Web端地图功能
+                    if (data.info === 'USERKEY_PLAT_NOMATCH') {
+                        console.log('⚠️ API Key平台配置提示:', data.info, '(Web端地图功能正常)');
+                    } else {
+                        console.log('❌ API Key REST API问题:', data.info);
+                    }
                 }
                 document.head.removeChild(script);
                 delete window[callbackName];
