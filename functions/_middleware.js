@@ -451,7 +451,7 @@ export async function onRequest(context) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>考勤打卡系统</title>
-    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=79a85def4762b3e9024547ee3b8b0e38&plugin=AMap.Geolocation"></script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=79a85def4762b3e9024547ee3b8b0e38&plugin=AMap.Geolocation,AMap.PlaceSearch,AMap.Geocoder"></script>
     <style>
         * {
             margin: 0;
@@ -930,6 +930,16 @@ export async function onRequest(context) {
     </div>
 
     <script>
+        // 全局错误处理
+        window.addEventListener('error', function(event) {
+            console.error('JavaScript错误:', event.error);
+            console.error('错误详情:', event.filename, event.lineno, event.colno);
+        });
+
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('未处理的Promise拒绝:', event.reason);
+        });
+
         let map = null;
         let currentLocation = null;
         let locationMarker = null;
@@ -940,40 +950,89 @@ export async function onRequest(context) {
 
         // 页面加载时初始化
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM加载完成，开始初始化...');
+
+            // 检查地图容器是否存在
+            const mapContainer = document.getElementById('mapContainer');
+            if (!mapContainer) {
+                console.error('地图容器不存在');
+                showMessage('页面加载异常，请刷新重试', 'error');
+                return;
+            }
+
             loadUserInfo();
-            initMap();
             loadStoredData();
-            getCurrentLocation();
             setupEventListeners();
+
+            // 延迟初始化地图，确保DOM完全渲染
+            setTimeout(function() {
+                initMap();
+                // 地图初始化后再获取位置
+                setTimeout(function() {
+                    getCurrentLocation();
+                }, 1000);
+            }, 500);
         });
 
         // 初始化高德地图
         function initMap() {
-            // 创建地图实例
-            map = new AMap.Map('mapContainer', {
-                zoom: 15,
-                center: [116.397428, 39.90923], // 默认中心点（北京）
-                mapStyle: 'amap://styles/normal',
-                viewMode: '2D'
-            });
+            try {
+                // 检查AMap是否已加载
+                if (typeof AMap === 'undefined') {
+                    console.error('高德地图API未加载');
+                    showMessage('地图服务加载失败，请刷新页面重试', 'error');
+                    return;
+                }
 
-            // 添加地图控件
-            map.addControl(new AMap.Scale());
-            map.addControl(new AMap.ToolBar());
+                console.log('开始初始化地图...');
 
-            // 初始化搜索服务和地理编码服务
-            AMap.plugin(['AMap.PlaceSearch', 'AMap.Geocoder'], function() {
-                placeSearch = new AMap.PlaceSearch({
-                    pageSize: 10,
-                    pageIndex: 1,
-                    city: '全国'
+                // 创建地图实例
+                map = new AMap.Map('mapContainer', {
+                    zoom: 15,
+                    center: [116.397428, 39.90923], // 默认中心点（北京）
+                    mapStyle: 'amap://styles/normal',
+                    viewMode: '2D'
                 });
 
-                geocoder = new AMap.Geocoder({
-                    city: '全国',
-                    radius: 1000
+                console.log('地图实例创建成功');
+
+                // 添加地图控件
+                map.addControl(new AMap.Scale());
+                map.addControl(new AMap.ToolBar());
+
+                // 地图加载完成事件
+                map.on('complete', function() {
+                    console.log('地图加载完成');
+
+                    // 初始化搜索服务和地理编码服务
+                    AMap.plugin(['AMap.PlaceSearch', 'AMap.Geocoder'], function() {
+                        console.log('开始初始化搜索和地理编码服务...');
+
+                        placeSearch = new AMap.PlaceSearch({
+                            pageSize: 10,
+                            pageIndex: 1,
+                            city: '全国'
+                        });
+
+                        geocoder = new AMap.Geocoder({
+                            city: '全国',
+                            radius: 1000
+                        });
+
+                        console.log('搜索和地理编码服务初始化完成');
+                    });
                 });
-            });
+
+                // 地图加载失败事件
+                map.on('error', function(error) {
+                    console.error('地图加载失败:', error);
+                    showMessage('地图加载失败，请检查网络连接', 'error');
+                });
+
+            } catch (error) {
+                console.error('地图初始化失败:', error);
+                showMessage('地图初始化失败: ' + error.message, 'error');
+            }
         }
 
         // 加载用户信息
@@ -1137,53 +1196,66 @@ export async function onRequest(context) {
             }
 
             if (!placeSearch) {
-                showMessage('搜索服务未初始化', 'error');
+                console.error('搜索服务未初始化');
+                showMessage('搜索服务未初始化，请稍后重试', 'error');
                 return;
             }
 
             showMessage('正在搜索...', 'info');
 
-            // 使用高德地图PlaceSearch服务
-            placeSearch.search(keyword, function(status, result) {
-                if (status === 'complete' && result.poiList && result.poiList.pois.length > 0) {
-                    const poi = result.poiList.pois[0]; // 取第一个结果
-                    const location = poi.location;
+            try {
+                // 使用高德地图PlaceSearch服务
+                placeSearch.search(keyword, function(status, result) {
+                    console.log('搜索结果:', status, result);
 
-                    // 更新地图位置
-                    map.setCenter([location.lng, location.lat]);
-                    map.setZoom(16);
+                    if (status === 'complete' && result.poiList && result.poiList.pois.length > 0) {
+                        const poi = result.poiList.pois[0]; // 取第一个结果
+                        const location = poi.location;
 
-                    // 更新当前位置
-                    currentLocation = {
-                        latitude: location.lat,
-                        longitude: location.lng
-                    };
+                        console.log('找到位置:', poi.name, location);
 
-                    // 更新位置标记
-                    updateLocationMarker();
+                        // 更新地图位置
+                        map.setCenter([location.lng, location.lat]);
+                        map.setZoom(16);
 
-                    // 更新位置信息显示
-                    document.getElementById('locationAddress').textContent = poi.name + ' - ' + poi.address;
-                    document.getElementById('locationCoords').textContent =
-                        \`坐标: \${location.lat.toFixed(6)}, \${location.lng.toFixed(6)}\`;
+                        // 更新当前位置
+                        currentLocation = {
+                            latitude: location.lat,
+                            longitude: location.lng
+                        };
 
-                    // 添加到搜索历史
-                    addToHistory({
-                        name: poi.name,
-                        address: poi.address,
-                        lat: location.lat,
-                        lng: location.lng,
-                        timestamp: new Date().toISOString()
-                    });
+                        // 更新位置标记
+                        updateLocationMarker();
 
-                    // 启用提交按钮
-                    document.getElementById('submitLocationBtn').disabled = false;
+                        // 更新位置信息显示
+                        document.getElementById('locationAddress').textContent = poi.name + ' - ' + poi.address;
+                        document.getElementById('locationCoords').textContent =
+                            \`坐标: \${location.lat.toFixed(6)}, \${location.lng.toFixed(6)}\`;
 
-                    showMessage('搜索成功', 'success');
-                } else {
-                    showMessage('未找到相关位置', 'error');
-                }
-            });
+                        // 添加到搜索历史
+                        addToHistory({
+                            name: poi.name,
+                            address: poi.address,
+                            lat: location.lat,
+                            lng: location.lng,
+                            timestamp: new Date().toISOString()
+                        });
+
+                        // 启用提交按钮
+                        document.getElementById('submitLocationBtn').disabled = false;
+
+                        showMessage('搜索成功', 'success');
+                    } else if (status === 'no_data') {
+                        showMessage('未找到相关位置', 'error');
+                    } else {
+                        console.error('搜索失败:', status, result);
+                        showMessage('搜索失败: ' + status, 'error');
+                    }
+                });
+            } catch (error) {
+                console.error('搜索异常:', error);
+                showMessage('搜索异常: ' + error.message, 'error');
+            }
         }
 
         // 使用高德地图API获取地址
