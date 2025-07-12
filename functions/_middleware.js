@@ -451,7 +451,7 @@ export async function onRequest(context) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>考勤打卡系统</title>
-    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=79a85def4762b3e9024547ee3b8b0e38&plugin=AMap.Geolocation,AMap.PlaceSearch,AMap.Geocoder"></script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=79a85def4762b3e9024547ee3b8b0e38"></script>
     <style>
         * {
             margin: 0;
@@ -996,30 +996,45 @@ export async function onRequest(context) {
 
                 console.log('地图实例创建成功');
 
-                // 添加地图控件
-                map.addControl(new AMap.Scale());
-                map.addControl(new AMap.ToolBar());
+                // 添加地图控件 - 使用插件方式加载
+                AMap.plugin(['AMap.Scale', 'AMap.ToolBar'], function() {
+                    map.addControl(new AMap.Scale());
+                    map.addControl(new AMap.ToolBar());
+                    console.log('地图控件加载完成');
+                });
 
                 // 地图加载完成事件
                 map.on('complete', function() {
                     console.log('地图加载完成');
 
-                    // 初始化搜索服务和地理编码服务
-                    AMap.plugin(['AMap.PlaceSearch', 'AMap.Geocoder'], function() {
+                    // 初始化所有需要的插件
+                    AMap.plugin([
+                        'AMap.PlaceSearch',
+                        'AMap.Geocoder',
+                        'AMap.Geolocation'
+                    ], function() {
                         console.log('开始初始化搜索和地理编码服务...');
 
-                        placeSearch = new AMap.PlaceSearch({
-                            pageSize: 10,
-                            pageIndex: 1,
-                            city: '全国'
-                        });
+                        try {
+                            placeSearch = new AMap.PlaceSearch({
+                                pageSize: 10,
+                                pageIndex: 1,
+                                city: '全国',
+                                map: map,
+                                autoFitView: true
+                            });
 
-                        geocoder = new AMap.Geocoder({
-                            city: '全国',
-                            radius: 1000
-                        });
+                            geocoder = new AMap.Geocoder({
+                                city: '全国',
+                                radius: 1000
+                            });
 
-                        console.log('搜索和地理编码服务初始化完成');
+                            console.log('搜索和地理编码服务初始化完成');
+                            console.log('PlaceSearch:', placeSearch);
+                            console.log('Geocoder:', geocoder);
+                        } catch (error) {
+                            console.error('服务初始化失败:', error);
+                        }
                     });
                 });
 
@@ -1260,37 +1275,67 @@ export async function onRequest(context) {
 
         // 使用高德地图API获取地址
         function getAddressFromCoords(lat, lng) {
+            console.log('开始地理编码:', lat, lng);
+            console.log('Geocoder状态:', geocoder);
+
             if (!geocoder) {
-                console.error('地理编码服务未初始化');
-                document.getElementById('locationAddress').textContent =
-                    \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
-                document.getElementById('locationCoords').textContent = '地址解析失败';
-                showMessage('地址解析失败，但可以继续打卡', 'error');
-                document.getElementById('submitLocationBtn').disabled = false;
-                return;
-            }
+                console.error('地理编码服务未初始化，尝试重新初始化...');
 
-            // 使用高德地图Geocoder服务
-            geocoder.getAddress([lng, lat], function(status, result) {
-                if (status === 'complete' && result.regeocode) {
-                    const address = result.regeocode.formattedAddress;
-                    document.getElementById('locationAddress').textContent = address;
-                    document.getElementById('locationCoords').textContent =
-                        \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
-
-                    showMessage('位置获取成功', 'success');
+                // 尝试重新初始化地理编码服务
+                if (typeof AMap !== 'undefined') {
+                    AMap.plugin('AMap.Geocoder', function() {
+                        geocoder = new AMap.Geocoder({
+                            city: '全国',
+                            radius: 1000
+                        });
+                        console.log('地理编码服务重新初始化完成');
+                        // 重新调用
+                        getAddressFromCoords(lat, lng);
+                    });
+                    return;
                 } else {
-                    console.error('地理编码失败:', result);
+                    // 如果AMap都没有，直接显示坐标
                     document.getElementById('locationAddress').textContent =
                         \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
                     document.getElementById('locationCoords').textContent = '地址解析失败';
-
                     showMessage('地址解析失败，但可以继续打卡', 'error');
+                    document.getElementById('submitLocationBtn').disabled = false;
+                    return;
                 }
+            }
 
-                // 启用提交按钮
+            try {
+                // 使用高德地图Geocoder服务
+                geocoder.getAddress([lng, lat], function(status, result) {
+                    console.log('地理编码结果:', status, result);
+
+                    if (status === 'complete' && result.regeocode) {
+                        const address = result.regeocode.formattedAddress;
+                        document.getElementById('locationAddress').textContent = address;
+                        document.getElementById('locationCoords').textContent =
+                            \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+
+                        showMessage('位置获取成功', 'success');
+                    } else {
+                        console.error('地理编码失败:', status, result);
+                        document.getElementById('locationAddress').textContent =
+                            \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+                        document.getElementById('locationCoords').textContent = '地址解析失败';
+
+                        showMessage('地址解析失败，但可以继续打卡', 'error');
+                    }
+
+                    // 启用提交按钮
+                    document.getElementById('submitLocationBtn').disabled = false;
+                });
+            } catch (error) {
+                console.error('地理编码异常:', error);
+                document.getElementById('locationAddress').textContent =
+                    \`坐标: \${lat.toFixed(6)}, \${lng.toFixed(6)}\`;
+                document.getElementById('locationCoords').textContent = '地址解析异常';
+                showMessage('地址解析异常，但可以继续打卡', 'error');
                 document.getElementById('submitLocationBtn').disabled = false;
-            });
+            }
         }
 
         // 根据坐标定位
