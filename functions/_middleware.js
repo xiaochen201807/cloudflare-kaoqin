@@ -497,6 +497,78 @@ export async function onRequest(context) {
             opacity: 0.9;
         }
 
+        /* 搜索区域 */
+        .search-section {
+            padding: 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 10px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 40px 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .search-btn:hover {
+            background: #5a67d8;
+        }
+
+        .coord-input-container {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .coord-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .coord-btn {
+            padding: 8px 12px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .coord-btn:hover {
+            background: #218838;
+        }
+
         /* 打卡面板内容 */
         .panel-content {
             flex: 1;
@@ -529,6 +601,106 @@ export async function onRequest(context) {
             font-family: monospace;
             font-size: 0.8em;
             color: #999;
+        }
+
+        /* 历史记录和收藏 */
+        .history-section {
+            margin-top: 15px;
+        }
+
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .clear-btn {
+            background: none;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+            font-size: 0.8em;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .clear-btn:hover {
+            background: #f8d7da;
+        }
+
+        .history-list, .favorite-list {
+            max-height: 120px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: white;
+        }
+
+        .history-item, .favorite-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85em;
+        }
+
+        .history-item:hover, .favorite-item:hover {
+            background: #f8f9fa;
+        }
+
+        .history-item:last-child, .favorite-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 0.8em;
+        }
+
+        .favorite-btn {
+            color: #ffc107;
+        }
+
+        .favorite-btn:hover {
+            background: #fff3cd;
+        }
+
+        .remove-btn {
+            color: #dc3545;
+        }
+
+        .remove-btn:hover {
+            background: #f8d7da;
+        }
+
+        .goto-btn {
+            color: #007bff;
+        }
+
+        .goto-btn:hover {
+            background: #d1ecf1;
         }
 
         .name-input {
@@ -674,6 +846,42 @@ export async function onRequest(context) {
                 <div class="user-name" id="userDisplayName">加载中...</div>
             </div>
 
+            <!-- 搜索区域 -->
+            <div class="search-section">
+                <div class="search-container">
+                    <input type="text" id="searchInput" class="search-input" placeholder="搜索地点..." />
+                    <button class="search-btn" onclick="searchLocation()">🔍</button>
+                </div>
+
+                <div class="coord-input-container">
+                    <input type="number" id="latInput" class="coord-input" placeholder="纬度" step="any" />
+                    <input type="number" id="lngInput" class="coord-input" placeholder="经度" step="any" />
+                    <button class="coord-btn" onclick="gotoCoordinates()">定位</button>
+                </div>
+
+                <!-- 搜索历史 -->
+                <div class="history-section">
+                    <div class="section-title">
+                        🕒 搜索历史
+                        <button class="clear-btn" onclick="clearHistory()">清空</button>
+                    </div>
+                    <div class="history-list" id="historyList">
+                        <div style="padding: 20px; text-align: center; color: #999; font-size: 0.8em;">暂无搜索历史</div>
+                    </div>
+                </div>
+
+                <!-- 收藏地点 -->
+                <div class="history-section">
+                    <div class="section-title">
+                        ⭐ 收藏地点
+                        <button class="clear-btn" onclick="clearFavorites()">清空</button>
+                    </div>
+                    <div class="favorite-list" id="favoriteList">
+                        <div style="padding: 20px; text-align: center; color: #999; font-size: 0.8em;">暂无收藏地点</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 面板内容 -->
             <div class="panel-content">
                 <div id="statusMessage"></div>
@@ -682,6 +890,9 @@ export async function onRequest(context) {
                     <h4>📍 当前位置</h4>
                     <p id="locationAddress">正在获取位置信息...</p>
                     <p class="coordinates" id="locationCoords">坐标: --</p>
+                    <button class="action-btn favorite-btn" id="favoriteCurrentBtn" onclick="favoriteCurrentLocation()" title="收藏当前位置">
+                        ⭐ 收藏
+                    </button>
                 </div>
 
                 <div class="name-input">
@@ -709,12 +920,17 @@ export async function onRequest(context) {
         let map = null;
         let currentLocation = null;
         let locationMarker = null;
+        let searchHistory = [];
+        let favoriteLocations = [];
+        let searchService = null;
 
         // 页面加载时初始化
         document.addEventListener('DOMContentLoaded', function() {
             loadUserInfo();
             initMap();
+            loadStoredData();
             getCurrentLocation();
+            setupEventListeners();
         });
 
         // 初始化高德地图
@@ -730,6 +946,15 @@ export async function onRequest(context) {
             // 添加地图控件
             map.addControl(new AMap.Scale());
             map.addControl(new AMap.ToolBar());
+
+            // 初始化搜索服务
+            AMap.plugin('AMap.PlaceSearch', function() {
+                searchService = new AMap.PlaceSearch({
+                    pageSize: 10,
+                    pageIndex: 1,
+                    city: '全国'
+                });
+            });
         }
 
         // 加载用户信息
@@ -841,6 +1066,106 @@ export async function onRequest(context) {
             });
         }
 
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 搜索框回车事件
+            document.getElementById('searchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchLocation();
+                }
+            });
+
+            // 坐标输入框回车事件
+            document.getElementById('latInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    gotoCoordinates();
+                }
+            });
+
+            document.getElementById('lngInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    gotoCoordinates();
+                }
+            });
+        }
+
+        // 加载本地存储的数据
+        function loadStoredData() {
+            try {
+                const storedHistory = localStorage.getItem('searchHistory');
+                if (storedHistory) {
+                    searchHistory = JSON.parse(storedHistory);
+                }
+
+                const storedFavorites = localStorage.getItem('favoriteLocations');
+                if (storedFavorites) {
+                    favoriteLocations = JSON.parse(storedFavorites);
+                }
+
+                updateHistoryDisplay();
+                updateFavoritesDisplay();
+            } catch (error) {
+                console.error('加载本地数据失败:', error);
+            }
+        }
+
+        // 搜索位置
+        function searchLocation() {
+            const keyword = document.getElementById('searchInput').value.trim();
+            if (!keyword) {
+                showMessage('请输入搜索关键词', 'error');
+                return;
+            }
+
+            if (!searchService) {
+                showMessage('搜索服务未初始化', 'error');
+                return;
+            }
+
+            showMessage('正在搜索...', 'info');
+
+            searchService.search(keyword, function(status, result) {
+                if (status === 'complete' && result.poiList && result.poiList.pois.length > 0) {
+                    const poi = result.poiList.pois[0]; // 取第一个结果
+                    const location = poi.location;
+
+                    // 更新地图位置
+                    map.setCenter([location.lng, location.lat]);
+                    map.setZoom(16);
+
+                    // 更新当前位置
+                    currentLocation = {
+                        latitude: location.lat,
+                        longitude: location.lng
+                    };
+
+                    // 更新位置标记
+                    updateLocationMarker();
+
+                    // 更新位置信息显示
+                    document.getElementById('locationAddress').textContent = poi.name + ' - ' + poi.address;
+                    document.getElementById('locationCoords').textContent =
+                        \`坐标: \${location.lat.toFixed(6)}, \${location.lng.toFixed(6)}\`;
+
+                    // 添加到搜索历史
+                    addToHistory({
+                        name: poi.name,
+                        address: poi.address,
+                        lat: location.lat,
+                        lng: location.lng,
+                        timestamp: new Date().toISOString()
+                    });
+
+                    // 启用提交按钮
+                    document.getElementById('submitLocationBtn').disabled = false;
+
+                    showMessage('搜索成功', 'success');
+                } else {
+                    showMessage('未找到相关位置', 'error');
+                }
+            });
+        }
+
         // 使用高德地图API获取地址
         async function getAddressFromCoords(lat, lng) {
             try {
@@ -872,10 +1197,101 @@ export async function onRequest(context) {
             }
         }
 
+        // 根据坐标定位
+        function gotoCoordinates() {
+            const lat = parseFloat(document.getElementById('latInput').value);
+            const lng = parseFloat(document.getElementById('lngInput').value);
+
+            if (isNaN(lat) || isNaN(lng)) {
+                showMessage('请输入有效的经纬度', 'error');
+                return;
+            }
+
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                showMessage('经纬度范围无效', 'error');
+                return;
+            }
+
+            // 更新地图位置
+            map.setCenter([lng, lat]);
+            map.setZoom(16);
+
+            // 更新当前位置
+            currentLocation = {
+                latitude: lat,
+                longitude: lng
+            };
+
+            // 更新位置标记
+            updateLocationMarker();
+
+            // 获取地址信息
+            getAddressFromCoords(lat, lng);
+
+            showMessage('定位成功', 'success');
+        }
+
         // 刷新位置
         function refreshLocation() {
             document.getElementById('submitLocationBtn').disabled = true;
             getCurrentLocation();
+        }
+
+        // 添加到搜索历史
+        function addToHistory(location) {
+            // 检查是否已存在
+            const exists = searchHistory.find(item =>
+                Math.abs(item.lat - location.lat) < 0.0001 &&
+                Math.abs(item.lng - location.lng) < 0.0001
+            );
+
+            if (!exists) {
+                searchHistory.unshift(location);
+                // 限制历史记录数量
+                if (searchHistory.length > 20) {
+                    searchHistory = searchHistory.slice(0, 20);
+                }
+
+                saveToLocalStorage('searchHistory', searchHistory);
+                updateHistoryDisplay();
+            }
+        }
+
+        // 添加到收藏
+        function addToFavorites(location) {
+            // 检查是否已存在
+            const exists = favoriteLocations.find(item =>
+                Math.abs(item.lat - location.lat) < 0.0001 &&
+                Math.abs(item.lng - location.lng) < 0.0001
+            );
+
+            if (!exists) {
+                favoriteLocations.unshift(location);
+                saveToLocalStorage('favoriteLocations', favoriteLocations);
+                updateFavoritesDisplay();
+                showMessage('已添加到收藏', 'success');
+            } else {
+                showMessage('该位置已在收藏中', 'info');
+            }
+        }
+
+        // 收藏当前位置
+        function favoriteCurrentLocation() {
+            if (!currentLocation) {
+                showMessage('请先获取位置信息', 'error');
+                return;
+            }
+
+            const address = document.getElementById('locationAddress').textContent;
+            const location = {
+                name: '当前位置',
+                address: address,
+                lat: currentLocation.latitude,
+                lng: currentLocation.longitude,
+                timestamp: new Date().toISOString()
+            };
+
+            addToFavorites(location);
         }
 
         // 提交打卡
@@ -928,6 +1344,117 @@ export async function onRequest(context) {
                 showMessage('打卡失败: ' + error.message, 'error');
                 submitBtn.disabled = false;
                 submitBtn.textContent = '✅ 提交打卡';
+            }
+        }
+
+        // 更新历史记录显示
+        function updateHistoryDisplay() {
+            const historyList = document.getElementById('historyList');
+
+            if (searchHistory.length === 0) {
+                historyList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999; font-size: 0.8em;">暂无搜索历史</div>';
+                return;
+            }
+
+            historyList.innerHTML = searchHistory.map((item, index) => \`
+                <div class="history-item">
+                    <div class="item-text" title="\${item.name} - \${item.address}">
+                        <strong>\${item.name}</strong><br>
+                        <small>\${item.address}</small>
+                    </div>
+                    <div class="item-actions">
+                        <button class="action-btn favorite-btn" onclick="addToFavorites(searchHistory[\${index}])" title="收藏">⭐</button>
+                        <button class="action-btn goto-btn" onclick="gotoLocation(\${item.lat}, \${item.lng})" title="定位">📍</button>
+                        <button class="action-btn remove-btn" onclick="removeFromHistory(\${index})" title="删除">×</button>
+                    </div>
+                </div>
+            \`).join('');
+        }
+
+        // 更新收藏显示
+        function updateFavoritesDisplay() {
+            const favoriteList = document.getElementById('favoriteList');
+
+            if (favoriteLocations.length === 0) {
+                favoriteList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999; font-size: 0.8em;">暂无收藏地点</div>';
+                return;
+            }
+
+            favoriteList.innerHTML = favoriteLocations.map((item, index) => \`
+                <div class="favorite-item">
+                    <div class="item-text" title="\${item.name} - \${item.address}">
+                        <strong>\${item.name}</strong><br>
+                        <small>\${item.address}</small>
+                    </div>
+                    <div class="item-actions">
+                        <button class="action-btn goto-btn" onclick="gotoLocation(\${item.lat}, \${item.lng})" title="定位">📍</button>
+                        <button class="action-btn remove-btn" onclick="removeFromFavorites(\${index})" title="删除">×</button>
+                    </div>
+                </div>
+            \`).join('');
+        }
+
+        // 跳转到指定位置
+        function gotoLocation(lat, lng) {
+            // 更新地图位置
+            map.setCenter([lng, lat]);
+            map.setZoom(16);
+
+            // 更新当前位置
+            currentLocation = {
+                latitude: lat,
+                longitude: lng
+            };
+
+            // 更新位置标记
+            updateLocationMarker();
+
+            // 获取地址信息
+            getAddressFromCoords(lat, lng);
+
+            showMessage('已定位到指定位置', 'success');
+        }
+
+        // 从历史记录中删除
+        function removeFromHistory(index) {
+            searchHistory.splice(index, 1);
+            saveToLocalStorage('searchHistory', searchHistory);
+            updateHistoryDisplay();
+        }
+
+        // 从收藏中删除
+        function removeFromFavorites(index) {
+            favoriteLocations.splice(index, 1);
+            saveToLocalStorage('favoriteLocations', favoriteLocations);
+            updateFavoritesDisplay();
+        }
+
+        // 清空历史记录
+        function clearHistory() {
+            if (confirm('确定要清空所有搜索历史吗？')) {
+                searchHistory = [];
+                saveToLocalStorage('searchHistory', searchHistory);
+                updateHistoryDisplay();
+                showMessage('历史记录已清空', 'success');
+            }
+        }
+
+        // 清空收藏
+        function clearFavorites() {
+            if (confirm('确定要清空所有收藏地点吗？')) {
+                favoriteLocations = [];
+                saveToLocalStorage('favoriteLocations', favoriteLocations);
+                updateFavoritesDisplay();
+                showMessage('收藏已清空', 'success');
+            }
+        }
+
+        // 保存到本地存储
+        function saveToLocalStorage(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+            } catch (error) {
+                console.error('保存到本地存储失败:', error);
             }
         }
 
