@@ -452,7 +452,7 @@ export async function onRequest(context) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>考勤打卡系统</title>
     <script type="text/javascript" src="config/map-config.js"></script>
-    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=79a85def4762b3e9024547ee3b8b0e38"></script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=caa6c37d36bdac64cf8d3e624fec3323"></script>
     <style>
         * {
             margin: 0;
@@ -1058,7 +1058,7 @@ export async function onRequest(context) {
         // 检查API Key状态
         function checkApiKeyStatus() {
             console.log('=== API Key 诊断信息 ===');
-            console.log('当前使用的API Key:', '79a85def4762b3e9024547ee3b8b0e38');
+            console.log('当前使用的API Key:', 'caa6c37d36bdac64cf8d3e624fec3323');
             console.log('当前域名:', window.location.hostname);
             console.log('当前完整URL:', window.location.href);
             console.log('当前协议:', window.location.protocol);
@@ -1088,7 +1088,7 @@ export async function onRequest(context) {
                 delete window[callbackName];
             };
 
-            script.src = `https://restapi.amap.com/v3/config/district?key=79a85def4762b3e9024547ee3b8b0e38&keywords=中国&subdistrict=0&callback=${callbackName}`;
+            script.src = `https://restapi.amap.com/v3/config/district?key=caa6c37d36bdac64cf8d3e624fec3323&keywords=中国&subdistrict=0&callback=${callbackName}`;
             script.onerror = function() {
                 console.log('JSONP测试失败，可能是网络问题');
                 document.head.removeChild(script);
@@ -1118,7 +1118,7 @@ export async function onRequest(context) {
                     <h3>🔑 高德地图API配置问题</h3>
                     <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0;">
                         <p><strong>当前域名：</strong><code>\${currentDomain}</code></p>
-                        <p><strong>API Key：</strong><code>79a85def4762b3e9024547ee3b8b0e38</code></p>
+                        <p><strong>API Key：</strong><code>caa6c37d36bdac64cf8d3e624fec3323</code></p>
                         <p><strong>错误信息：</strong><code>\${errorInfo || '未知错误'}</code></p>
                     </div>
 

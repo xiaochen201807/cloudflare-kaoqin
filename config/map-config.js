@@ -2,7 +2,7 @@
 const MAP_CONFIG = {
     // 高德地图API Key
     // 请在高德开放平台申请：https://console.amap.com/dev/key
-    AMAP_KEY: 'a7a90e05a37d3f6bf76d4a9032fc9129', // 临时测试Key，请替换为你自己的Key
+    AMAP_KEY: 'caa6c37d36bdac64cf8d3e624fec3323', // daka-cloudflare项目专用Key
     
     // 地图版本
     AMAP_VERSION: '1.4.15',
