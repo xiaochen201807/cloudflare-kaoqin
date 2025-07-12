@@ -286,27 +286,36 @@ async function handleSubmitLocation(context, session) {
     const currentDate = new Date().toISOString().split('T')[0]; // 格式: 2025-07-11
     const coordinates = `${requestData.longitude},${requestData.latitude}`;
 
-    // 获取地址信息（如果前端没有提供）
+    // 获取地址信息
     let address = requestData.address || '位置信息获取中...';
     let provinceCode = requestData.CLOCK_PROVINCE_CODE || '';
     let provinceShort = requestData.CLOCK_PROVINCE_SHORT || '';
     let cityCode = requestData.CLOCK_CITY_CODE || '';
     let cityName = requestData.CLOCK_CITY_NAME || '';
 
-    // 如果没有地址信息，尝试通过高德地图API获取
-    if (!requestData.address) {
-      try {
+    // 尝试通过高德地图API获取完整的地理信息（包括行政区划）
+    // 即使前端提供了地址，也要获取省市信息以确保数据完整性
+    try {
         const amapKey = env.AMAP_KEY || "caa6c37d36bdac64cf8d3e624fec3323";
         const amapUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${amapKey}&location=${requestData.longitude},${requestData.latitude}&extensions=all&batch=false&roadlevel=0`;
 
         const geoResponse = await fetch(amapUrl);
         const geoData = await geoResponse.json();
 
+        console.log('高德地图API响应:', JSON.stringify(geoData, null, 2));
+
         if (geoData.status === "1" && geoData.regeocode) {
-          address = geoData.regeocode.formatted_address;
+          // 如果前端没有提供地址，使用API返回的地址
+          if (!requestData.address) {
+            address = geoData.regeocode.formatted_address;
+          }
+
           const addressComponent = geoData.regeocode.addressComponent;
+          console.log('地址组件:', JSON.stringify(addressComponent, null, 2));
 
           if (addressComponent) {
+            console.log('开始处理地址组件...');
+
             // 省份代码映射（简化版本，可以根据需要扩展）
             const provinceCodeMap = {
               '北京市': '110000', '天津市': '120000', '河北省': '130000', '山西省': '140000',
@@ -330,21 +339,34 @@ async function handleSubmitLocation(context, session) {
               '青海省': '青', '宁夏回族自治区': '宁', '新疆维吾尔自治区': '新'
             };
 
-            provinceCode = provinceCodeMap[addressComponent.province] || '';
-            provinceShort = provinceShortMap[addressComponent.province] || '';
+            // 获取省份信息
+            const province = addressComponent.province || '';
+            console.log('省份:', province);
 
-            // 城市代码（简化处理，实际应该有完整的城市代码表）
+            provinceCode = provinceCodeMap[province] || '';
+            provinceShort = provinceShortMap[province] || '';
+
+            console.log('省份代码:', provinceCode, '省份简称:', provinceShort);
+
+            // 获取城市信息
             if (addressComponent.citycode) {
               cityCode = addressComponent.citycode;
             }
             cityName = addressComponent.city || addressComponent.district || '';
+
+            console.log('城市代码:', cityCode, '城市名称:', cityName);
+          } else {
+            console.log('地址组件为空');
           }
+        } else {
+          console.log('高德地图API返回错误或无数据:', geoData);
         }
-      } catch (geoError) {
+    } catch (geoError) {
         console.error('获取地址信息失败:', geoError);
-        // 如果获取地址失败，使用坐标作为地址
-        address = `${requestData.latitude.toFixed(6)}, ${requestData.longitude.toFixed(6)}`;
-      }
+        // 如果获取地址失败，使用坐标作为地址（如果前端没有提供地址的话）
+        if (!requestData.address) {
+          address = `${requestData.latitude.toFixed(6)}, ${requestData.longitude.toFixed(6)}`;
+        }
     }
 
     // 构建符合n8n期望的数据格式
@@ -364,6 +386,8 @@ async function handleSubmitLocation(context, session) {
       userId: session?.user?.id || 0,
       username: session?.user?.login || 'unknown'
     };
+
+    console.log('最终提交给n8n的数据:', JSON.stringify(data, null, 2));
 
     // 选择合适的API端点
     let n8nEndpoint = env.N8N_API_ENDPOINT;
