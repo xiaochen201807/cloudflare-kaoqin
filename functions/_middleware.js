@@ -1493,6 +1493,10 @@ export async function onRequest(context) {
             console.log('开始地理编码:', lat, lng);
             console.log('Geocoder状态:', geocoder);
 
+            // 设置地址获取中状态
+            document.getElementById('locationAddress').textContent = '正在解析地址...';
+            document.getElementById('submitLocationBtn').disabled = true;
+
             if (!geocoder) {
                 console.error('地理编码服务未初始化，尝试重新初始化...');
 
@@ -1714,22 +1718,38 @@ export async function onRequest(context) {
                 return;
             }
 
+            // 获取当前显示的地址信息
+            const locationAddressElement = document.getElementById('locationAddress');
+            const currentAddress = locationAddressElement ? locationAddressElement.textContent : '';
+
+            // 检查地址是否还在获取中
+            if (currentAddress.includes('获取中') || currentAddress.includes('解析中') || currentAddress.includes('正在解析')) {
+                showMessage('地址信息正在获取中，请稍等...', 'warning');
+                return;
+            }
+
             const submitBtn = document.getElementById('submitLocationBtn');
             submitBtn.disabled = true;
             submitBtn.textContent = '提交中...';
 
             try {
+                // 构建完整的提交数据
+                const submitData = {
+                    latitude: currentLocation.latitude,
+                    longitude: currentLocation.longitude,
+                    address: currentAddress || `${currentLocation.latitude.toFixed(6)}, ${currentLocation.longitude.toFixed(6)}`,
+                    realName: realName,
+                    timestamp: new Date().toISOString()
+                };
+
+                console.log('提交数据:', submitData);
+
                 const response = await fetch('/api/submit-location', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        latitude: currentLocation.latitude,
-                        longitude: currentLocation.longitude,
-                        realName: realName,
-                        timestamp: new Date().toISOString()
-                    })
+                    body: JSON.stringify(submitData)
                 });
 
                 if (response.ok) {
