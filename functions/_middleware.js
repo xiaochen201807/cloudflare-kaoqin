@@ -451,7 +451,8 @@ export async function onRequest(context) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>考勤打卡系统</title>
-    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=79a85def4762b3e9024547ee3b8b0e38"></script>
+    <script type="text/javascript" src="config/map-config.js"></script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=a7a90e05a37d3f6bf76d4a9032fc9129"></script>
     <style>
         * {
             margin: 0;
@@ -1041,12 +1042,39 @@ export async function onRequest(context) {
                 // 地图加载失败事件
                 map.on('error', function(error) {
                     console.error('地图加载失败:', error);
-                    showMessage('地图加载失败，请检查网络连接', 'error');
+                    showMessage('地图加载失败，可能是API Key问题，请联系管理员', 'error');
+
+                    // 显示API Key错误提示
+                    showApiKeyError();
                 });
 
             } catch (error) {
                 console.error('地图初始化失败:', error);
                 showMessage('地图初始化失败: ' + error.message, 'error');
+            }
+        }
+
+        // 显示API Key错误信息
+        function showApiKeyError() {
+            const errorHtml = \`
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px; color: #856404;">
+                    <h3>🔑 地图服务配置问题</h3>
+                    <p><strong>错误原因：</strong>高德地图API Key无效或配额已用完</p>
+                    <p><strong>解决方案：</strong></p>
+                    <ol>
+                        <li>申请新的高德地图API Key</li>
+                        <li>检查域名白名单设置</li>
+                        <li>确认API配额是否充足</li>
+                    </ol>
+                    <p><strong>申请地址：</strong><a href="https://console.amap.com/dev/key" target="_blank">高德开放平台控制台</a></p>
+                    <p><em>详细说明请查看项目中的"高德地图API申请指南.md"文件</em></p>
+                </div>
+            \`;
+
+            // 在地图容器中显示错误信息
+            const mapContainer = document.getElementById('mapContainer');
+            if (mapContainer) {
+                mapContainer.innerHTML = errorHtml;
             }
         }
 
@@ -1262,6 +1290,10 @@ export async function onRequest(context) {
                         showMessage('搜索成功', 'success');
                     } else if (status === 'no_data') {
                         showMessage('未找到相关位置', 'error');
+                    } else if (status === 'error' && result === 'INVALID_USER_SCODE') {
+                        console.error('API Key无效:', status, result);
+                        showMessage('地图服务配置错误，请联系管理员更新API Key', 'error');
+                        showApiKeyError();
                     } else {
                         console.error('搜索失败:', status, result);
                         showMessage('搜索失败: ' + status, 'error');
