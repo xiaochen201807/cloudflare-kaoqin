@@ -521,6 +521,7 @@ if (!navigator.geolocation) {
     }
 
 
+    /**
      * 添加到搜索历史
      */
     addToSearchHistory(location) {
@@ -690,17 +691,20 @@ if (!navigator.geolocation) {
 // 全局地图管理器实例
 window.mapManager = null;
 
+// 全局搜索函数，确保在HTML中可以直接调用
+function searchLocation() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput && window.mapManager) {
+        window.mapManager.searchLocation(searchInput.value);
+    }
+}
+
 // 地图相关的全局函数
 window.initMap = function() {
     window.mapManager = new MapManager();
 };
 
-window.searchLocation = function() {
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput && window.mapManager) {
-        window.mapManager.searchLocation(searchInput.value);
-    }
-};
+window.searchLocation = searchLocation;
 
 window.getCurrentCoordinates = function() {
     if (window.mapManager) {
