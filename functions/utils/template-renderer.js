@@ -88,34 +88,65 @@ const TEMPLATES = {
         .user-info {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-        }
-        
-        .logout-btn {
-            background: transparent;
-            color: #666;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 2px 8px;
-            font-size: 12px;
-            cursor: pointer;
+            justify-content: flex-end;
             margin-left: 10px;
         }
         
+        .logout-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 8px;
+            transition: background 0.3s;
+        }
+        
         .logout-btn:hover {
-            background: #f5f5f5;
+            background: #d32f2f;
+        }
+        
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .panel-header h1 {
+            margin-right: 10px;
+            white-space: nowrap;
+        }
+        
+        /* 优化面板高度，避免滚动条 */
+        .checkin-panel {
+            max-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-content {
+            flex: 1;
+        }
+        
+        .search-section {
+            max-height: calc(100vh - 280px);
+            overflow-y: auto;
         }
         
         /* 移动端适配 */
         @media (max-width: 768px) {
             .panel-header {
-                flex-direction: column;
-                align-items: flex-start;
+                flex-wrap: wrap;
             }
             
-            .user-info {
+            .search-section {
+                max-height: calc(100vh - 320px);
+            }
+            
+            .btn-primary {
                 margin-top: 10px;
-                width: 100%;
             }
         }
     </style>
@@ -199,11 +230,6 @@ const TEMPLATES = {
                 <button class="btn btn-primary" id="submitLocationBtn" onclick="submitLocation()" disabled>
                     ✅ 提交打卡
                 </button>
-            </div>
-
-            <!-- 面板底部 -->
-            <div class="panel-footer">
-                <div class="version">版本 v1.0.0</div>
             </div>
         </div>
     </div>
