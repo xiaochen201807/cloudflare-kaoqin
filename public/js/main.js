@@ -128,8 +128,8 @@ class MainApp {
                 return;
             }
 
-            // 获取当前位置数据
-            const locationData = window.mapManager ? window.mapManager.getCurrentLocationData() : null;
+            // 获取当前位置数据 - 使用新的getLocationData函数获取正确格式的表单数据
+            const locationData = window.getLocationData ? window.getLocationData() : null;
             if (!locationData) {
                 this.showMessage('请先选择一个位置', 'error');
                 return;
@@ -137,10 +137,8 @@ class MainApp {
 
             // 准备提交数据
             const submitData = {
-                name: realName.trim(),
-                address: locationData.address,
-                longitude: locationData.longitude,
-                latitude: locationData.latitude,
+                realName: realName.trim(),
+                ...locationData,  // 直接使用表单格式的数据
                 type: 'checkin',
                 timestamp: new Date().toISOString()
             };

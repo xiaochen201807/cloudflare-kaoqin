@@ -110,8 +110,8 @@ class MapManager {
 
             console.log('地图点击位置:', { lng, lat });
             this.updateLocation(lng, lat);
-            this.getAddressByCoords([lng, lat]);
-});
+            this.getAddressByCoords([lng, lat], true); // 修改为自动显示信息窗口
+        });
     }
 
     /**
@@ -146,6 +146,9 @@ if (!navigator.geolocation) {
             });
         }
 
+        // 增加超时时间到30秒，解决某些网络环境下定位超时问题
+        this.geolocation.setTimeout(30000);
+        
         this.geolocation.getCurrentPosition((status, result) => {
             console.log('高德定位回调 - 状态:', status, '结果:', result);
 
@@ -154,8 +157,8 @@ if (!navigator.geolocation) {
                 console.log('获取位置成功:', { lng, lat });
 
                 this.updateLocation(lng, lat);
-        this.map.setCenter([lng, lat]);
-                this.getAddressByCoords([lng, lat]);
+                this.map.setCenter([lng, lat]);
+                this.getAddressByCoords([lng, lat], true); // 添加参数，表示需要自动显示信息窗口
 
             } else {
                 console.error('定位失败:', result);
@@ -207,7 +210,7 @@ if (!navigator.geolocation) {
 
         const options = {
             enableHighAccuracy: true,
-            timeout: 10000,
+            timeout: 30000, // 增加超时时间到30秒
             maximumAge: 0
         };
 
@@ -218,9 +221,9 @@ if (!navigator.geolocation) {
 
                 this.updateLocation(lng, lat);
                 this.map.setCenter([lng, lat]);
-                this.getAddressByCoords([lng, lat]);
+                this.getAddressByCoords([lng, lat], true); // 添加参数，表示需要自动显示信息窗口
 
-                this.showMessage('已使用浏览器定位获取位置', 'success');
+                this.showSuccess('已使用浏览器定位获取位置'); // 修复方法调用错误
             },
             (error) => {
                 console.error('原生定位也失败:', error);
@@ -270,7 +273,7 @@ if (!navigator.geolocation) {
                 this.map.setCenter([lng, lat]);
                 
                 // 获取详细地址信息
-                this.getAddressByCoords([lng, lat]);
+                this.getAddressByCoords([lng, lat], true); // 添加参数，表示需要自动显示信息窗口
         
                 // 添加到搜索历史
                 this.addToSearchHistory({
@@ -359,7 +362,7 @@ if (!navigator.geolocation) {
     /**
      * 根据坐标获取地址信息（按照原项目实现）
      */
-    getAddressByCoords(position) {
+    getAddressByCoords(position, autoShowInfoWindow = false) {
         console.log('开始根据坐标获取地址:', position);
 
         if (!this.geocoder) {
@@ -402,8 +405,10 @@ if (!navigator.geolocation) {
                 // 更新位置信息显示
                 this.updateLocationInfo(address, lng, lat);
 
-                // 显示信息窗口
-                this.showLocationInfo(name, address, [lng, lat]);
+                // 显示信息窗口（如果需要自动显示）
+                if (autoShowInfoWindow) {
+                    this.showLocationInfo(name, address, [lng, lat]);
+                }
 
                 // 获取省市信息并更新表单（参考原项目）
                 this.updateFormWithAddressInfo(addressComponent, lng, lat, address);
@@ -414,7 +419,11 @@ if (!navigator.geolocation) {
                 const lat = lngLatPosition.getLat ? lngLatPosition.getLat() : lngLatPosition.lat;
                 const coords = `${lng.toFixed(6)}, ${lat.toFixed(6)}`;
                 this.updateLocationInfo(`坐标位置 (${coords})`, lng, lat);
-                this.showLocationInfo('未知位置', `坐标: ${coords}`, [lng, lat]);
+                
+                // 显示信息窗口（如果需要自动显示）
+                if (autoShowInfoWindow) {
+                    this.showLocationInfo('未知位置', `坐标: ${coords}`, [lng, lat]);
+                }
             }
         });
     }
@@ -609,14 +618,22 @@ if (!navigator.geolocation) {
             return null;
         }
         
-        const locationAddress = document.getElementById('locationAddress');
-        const address = locationAddress ? locationAddress.textContent : '未知位置';
-        
-        return {
-            address: address,
-            longitude: this.currentLocation.lng,
-            latitude: this.currentLocation.lat
+        // 获取表单中已经设置的值
+        const formData = {
+            'form-address': document.getElementById('form-address')?.value || '',
+            'form-lng': document.getElementById('form-lng')?.value || this.currentLocation.lng,
+            'form-lat': document.getElementById('form-lat')?.value || this.currentLocation.lat,
+            'form-clock-coordinates': document.getElementById('form-clock-coordinates')?.value || `${this.currentLocation.lng},${this.currentLocation.lat}`,
+            'form-clock-address': document.getElementById('form-clock-address')?.value || '',
+            'form-province-code': document.getElementById('form-province-code')?.value || '',
+            'form-province-short': document.getElementById('form-province-short')?.value || '',
+            'form-city-code': document.getElementById('form-city-code')?.value || '',
+            'form-city-name': document.getElementById('form-city-name')?.value || ''
         };
+        
+        console.log('提交位置数据:', formData);
+        
+        return formData;
     }
 
     /**
@@ -716,4 +733,12 @@ window.favoriteCurrentLocation = function() {
     if (window.mapManager) {
         window.mapManager.favoriteCurrentLocation();
     }
+};
+
+// 添加获取位置数据的全局函数，供表单提交时调用
+window.getLocationData = function() {
+    if (window.mapManager) {
+        return window.mapManager.getCurrentLocationData();
+    }
+    return null;
 };

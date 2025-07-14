@@ -286,124 +286,144 @@ async function handleSubmitLocation(context, session) {
 
   try {
     const requestData = await request.json();
+    console.log('收到的表单数据:', JSON.stringify(requestData, null, 2));
 
+    // 从表单数据中提取坐标信息
+    const longitude = parseFloat(requestData['form-lng'] || requestData.longitude);
+    const latitude = parseFloat(requestData['form-lat'] || requestData.latitude);
+    
     // 构建符合n8n期望格式的数据
     const currentDate = new Date().toISOString().split('T')[0]; // 格式: 2025-07-11
-    const coordinates = `${requestData.longitude},${requestData.latitude}`;
+    const coordinates = requestData['form-clock-coordinates'] || `${longitude},${latitude}`;
 
     // 获取地址信息
-    let address = requestData.address || '位置信息获取中...';
-    let provinceCode = requestData.CLOCK_PROVINCE_CODE || '';
-    let provinceShort = requestData.CLOCK_PROVINCE_SHORT || '';
-    let cityCode = requestData.CLOCK_CITY_CODE || '';
-    let cityName = requestData.CLOCK_CITY_NAME || '';
+    let address = requestData['form-address'] || requestData['form-clock-address'] || requestData.address || '位置信息获取中...';
+    let provinceCode = requestData['form-province-code'] || requestData.CLOCK_PROVINCE_CODE || '';
+    let provinceShort = requestData['form-province-short'] || requestData.CLOCK_PROVINCE_SHORT || '';
+    let cityCode = requestData['form-city-code'] || requestData.CLOCK_CITY_CODE || '';
+    let cityName = requestData['form-city-name'] || requestData.CLOCK_CITY_NAME || '';
 
+    // 如果表单数据中已经包含了所有必要信息，则不需要再调用高德地图API
+    const hasCompleteAddressInfo = address && provinceCode && provinceShort && cityCode && cityName;
+    
     // 尝试通过高德地图API获取完整的地理信息（包括行政区划）
-    // 即使前端提供了地址，也要获取省市信息以确保数据完整性
-    try {
-        const amapKey = env.AMAP_KEY || "caa6c37d36bdac64cf8d3e624fec3323";
-        const amapUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${amapKey}&location=${requestData.longitude},${requestData.latitude}&extensions=all&batch=false&roadlevel=0`;
+    // 只有在缺少必要信息时才调用API
+    if (!hasCompleteAddressInfo) {
+      try {
+          const amapKey = env.AMAP_KEY || "caa6c37d36bdac64cf8d3e624fec3323";
+          const amapUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${amapKey}&location=${longitude},${latitude}&extensions=all&batch=false&roadlevel=0`;
 
-        console.log('调用高德地图API:', amapUrl);
-        console.log('使用的API Key:', amapKey.substring(0, 8) + '...');
+          console.log('调用高德地图API:', amapUrl);
+          console.log('使用的API Key:', amapKey.substring(0, 8) + '...');
 
-        const geoResponse = await fetch(amapUrl);
+          const geoResponse = await fetch(amapUrl);
 
-        if (!geoResponse.ok) {
-          console.error('高德地图API HTTP错误:', geoResponse.status, geoResponse.statusText);
-          throw new Error(`HTTP ${geoResponse.status}: ${geoResponse.statusText}`);
-        }
-
-        const geoData = await geoResponse.json();
-
-        console.log('高德地图API响应状态:', geoData.status);
-        console.log('高德地图API完整响应:', JSON.stringify(geoData, null, 2));
-
-        if (geoData.status === "1" && geoData.regeocode) {
-          console.log('高德地图API调用成功');
-
-          // 如果前端没有提供地址，使用API返回的地址
-          if (!requestData.address) {
-            address = geoData.regeocode.formatted_address;
-            console.log('使用API返回的地址:', address);
-          } else {
-            console.log('使用前端提供的地址:', address);
+          if (!geoResponse.ok) {
+            console.error('高德地图API HTTP错误:', geoResponse.status, geoResponse.statusText);
+            throw new Error(`HTTP ${geoResponse.status}: ${geoResponse.statusText}`);
           }
 
-          const addressComponent = geoData.regeocode.addressComponent;
-          console.log('地址组件:', JSON.stringify(addressComponent, null, 2));
+          const geoData = await geoResponse.json();
 
-          if (addressComponent) {
-            console.log('开始处理地址组件...');
+          console.log('高德地图API响应状态:', geoData.status);
+          console.log('高德地图API完整响应:', JSON.stringify(geoData, null, 2));
 
-            // 省份代码映射（简化版本，可以根据需要扩展）
-            const provinceCodeMap = {
-              '北京市': '110000', '天津市': '120000', '河北省': '130000', '山西省': '140000',
-              '内蒙古自治区': '150000', '辽宁省': '210000', '吉林省': '220000', '黑龙江省': '230000',
-              '上海市': '310000', '江苏省': '320000', '浙江省': '330000', '安徽省': '340000',
-              '福建省': '350000', '江西省': '360000', '山东省': '370000', '河南省': '410000',
-              '湖北省': '420000', '湖南省': '430000', '广东省': '440000', '广西壮族自治区': '450000',
-              '海南省': '460000', '重庆市': '500000', '四川省': '510000', '贵州省': '520000',
-              '云南省': '530000', '西藏自治区': '540000', '陕西省': '610000', '甘肃省': '620000',
-              '青海省': '630000', '宁夏回族自治区': '640000', '新疆维吾尔自治区': '650000'
-            };
+          if (geoData.status === "1" && geoData.regeocode) {
+            console.log('高德地图API调用成功');
 
-            const provinceShortMap = {
-              '北京市': '京', '天津市': '津', '河北省': '冀', '山西省': '晋',
-              '内蒙古自治区': '蒙', '辽宁省': '辽', '吉林省': '吉', '黑龙江省': '黑',
-              '上海市': '沪', '江苏省': '苏', '浙江省': '浙', '安徽省': '皖',
-              '福建省': '闽', '江西省': '赣', '山东省': '鲁', '河南省': '豫',
-              '湖北省': '鄂', '湖南省': '湘', '广东省': '粤', '广西壮族自治区': '桂',
-              '海南省': '琼', '重庆市': '渝', '四川省': '川', '贵州省': '黔',
-              '云南省': '滇', '西藏自治区': '藏', '陕西省': '陕', '甘肃省': '甘',
-              '青海省': '青', '宁夏回族自治区': '宁', '新疆维吾尔自治区': '新'
-            };
-
-            // 获取省份信息
-            const province = addressComponent.province || '';
-            console.log('省份:', province);
-
-            provinceCode = provinceCodeMap[province] || '';
-            provinceShort = provinceShortMap[province] || '';
-
-            console.log('省份代码:', provinceCode, '省份简称:', provinceShort);
-
-            // 获取城市信息
-            if (addressComponent.citycode) {
-              cityCode = addressComponent.citycode;
+            // 如果表单没有提供地址，使用API返回的地址
+            if (!address || address === '位置信息获取中...') {
+              address = geoData.regeocode.formatted_address;
+              console.log('使用API返回的地址:', address);
+            } else {
+              console.log('使用表单提供的地址:', address);
             }
-            cityName = addressComponent.city || addressComponent.district || '';
 
-            console.log('城市代码:', cityCode, '城市名称:', cityName);
+            const addressComponent = geoData.regeocode.addressComponent;
+            console.log('地址组件:', JSON.stringify(addressComponent, null, 2));
+
+            if (addressComponent) {
+              console.log('开始处理地址组件...');
+
+              // 省份代码映射（简化版本，可以根据需要扩展）
+              const provinceCodeMap = {
+                '北京市': '110000', '天津市': '120000', '河北省': '130000', '山西省': '140000',
+                '内蒙古自治区': '150000', '辽宁省': '210000', '吉林省': '220000', '黑龙江省': '230000',
+                '上海市': '310000', '江苏省': '320000', '浙江省': '330000', '安徽省': '340000',
+                '福建省': '350000', '江西省': '360000', '山东省': '370000', '河南省': '410000',
+                '湖北省': '420000', '湖南省': '430000', '广东省': '440000', '广西壮族自治区': '450000',
+                '海南省': '460000', '重庆市': '500000', '四川省': '510000', '贵州省': '520000',
+                '云南省': '530000', '西藏自治区': '540000', '陕西省': '610000', '甘肃省': '620000',
+                '青海省': '630000', '宁夏回族自治区': '640000', '新疆维吾尔自治区': '650000'
+              };
+
+              const provinceShortMap = {
+                '北京市': '京', '天津市': '津', '河北省': '冀', '山西省': '晋',
+                '内蒙古自治区': '蒙', '辽宁省': '辽', '吉林省': '吉', '黑龙江省': '黑',
+                '上海市': '沪', '江苏省': '苏', '浙江省': '浙', '安徽省': '皖',
+                '福建省': '闽', '江西省': '赣', '山东省': '鲁', '河南省': '豫',
+                '湖北省': '鄂', '湖南省': '湘', '广东省': '粤', '广西壮族自治区': '桂',
+                '海南省': '琼', '重庆市': '渝', '四川省': '川', '贵州省': '黔',
+                '云南省': '滇', '西藏自治区': '藏', '陕西省': '陕', '甘肃省': '甘',
+                '青海省': '青', '宁夏回族自治区': '宁', '新疆维吾尔自治区': '新'
+              };
+
+              // 获取省份信息
+              const province = addressComponent.province || '';
+              console.log('省份:', province);
+
+              if (!provinceCode) {
+                provinceCode = provinceCodeMap[province] || '';
+              }
+              
+              if (!provinceShort) {
+                provinceShort = provinceShortMap[province] || '';
+              }
+
+              console.log('省份代码:', provinceCode, '省份简称:', provinceShort);
+
+              // 获取城市信息
+              if (!cityCode && addressComponent.citycode) {
+                cityCode = addressComponent.citycode;
+              }
+              
+              if (!cityName) {
+                cityName = addressComponent.city || addressComponent.district || '';
+              }
+
+              console.log('城市代码:', cityCode, '城市名称:', cityName);
+            } else {
+              console.log('地址组件为空');
+            }
           } else {
-            console.log('地址组件为空');
-          }
-        } else {
-          console.log('高德地图API返回错误或无数据:');
-          console.log('- status:', geoData.status);
-          console.log('- info:', geoData.info);
-          console.log('- infocode:', geoData.infocode);
+            console.log('高德地图API返回错误或无数据:');
+            console.log('- status:', geoData.status);
+            console.log('- info:', geoData.info);
+            console.log('- infocode:', geoData.infocode);
 
-          if (geoData.status === "0") {
-            console.error('高德地图API错误:', geoData.info || '未知错误');
-            if (geoData.infocode === "INVALID_USER_SCODE") {
-              console.error('API Key无效或安全码错误');
+            if (geoData.status === "0") {
+              console.error('高德地图API错误:', geoData.info || '未知错误');
+              if (geoData.infocode === "INVALID_USER_SCODE") {
+                console.error('API Key无效或安全码错误');
+              }
             }
           }
-        }
-    } catch (geoError) {
-        console.error('获取地址信息失败:', geoError);
-        // 如果获取地址失败，使用坐标作为地址（如果前端没有提供地址的话）
-        if (!requestData.address) {
-          address = `${requestData.latitude.toFixed(6)}, ${requestData.longitude.toFixed(6)}`;
-        }
+      } catch (geoError) {
+          console.error('获取地址信息失败:', geoError);
+          // 如果获取地址失败，使用坐标作为地址（如果没有提供地址的话）
+          if (!address || address === '位置信息获取中...') {
+            address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+          }
+      }
+    } else {
+      console.log('表单已包含完整地址信息，跳过高德地图API调用');
     }
 
     // 构建符合n8n期望的数据格式
     let data = {
       name: requestData.realName || session?.user?.name || '未知用户',
-      longitude: requestData.longitude.toString(),
-      latitude: requestData.latitude.toString(),
+      longitude: longitude.toString(),
+      latitude: latitude.toString(),
       address: address,
       type: "check-in",
       timestamp: currentDate,
