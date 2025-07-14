@@ -13,11 +13,10 @@ class MapManager {
         this.geolocation = null;
         this.currentLocation = null;
         this.searchHistory = this.loadSearchHistory();
-
         this.favoriteLocations = this.loadFavoriteLocations();
+        this.formData = null; // 添加formData属性用于存储表单数据
         
         this.init();
-
     }
 
     /**
@@ -433,23 +432,23 @@ if (!navigator.geolocation) {
      */
     updateFormWithAddressInfo(addressComponent, lng, lat, address) {
         try {
-// 获取省市信息
+            // 获取省市信息
             const provinceCode = addressComponent.adcode ? addressComponent.adcode.substring(0, 2) + '0000' : '000000';
             const cityCode = addressComponent.adcode ? addressComponent.adcode.substring(0, 4) + '00' : '000000';
             const cityName = addressComponent.city || '';
             const provinceShort = this.getProvinceShort(addressComponent.province);
 
-// 更新隐藏表单字段（如果存在）
+            // 更新隐藏表单字段（如果存在）
             const formElements = {
                
                 'form-lng': lng,
-'form-lat': lat,
+                'form-lat': lat,
                 'form-address': address,
                 'form-clock-coordinates': `${lng},${lat}`,
                 'form-clock-address': address,
                 'form-province-code': provinceCode,
                 'form-province-short': provinceShort,
-'form-city-code': cityCode,
+                'form-city-code': cityCode,
                 'form-city-name': cityName
             };
 
@@ -460,11 +459,14 @@ if (!navigator.geolocation) {
                 }
             });
 
+            // 保存到对象中，确保在提交时能够获取到这些数据
+            this.formData = { ...formElements };
+
             console.log('表单信息已更新:', formElements);
         } catch (error) {
             console.error('更新表单信息失败:', error);
         }
-}
+    }
 
     /**
      * 获取省份简称（参考原项目实现）
@@ -619,21 +621,38 @@ if (!navigator.geolocation) {
         }
         
         // 获取表单中已经设置的值
-        const formData = {
-            'form-address': document.getElementById('form-address')?.value || '',
-            'form-lng': document.getElementById('form-lng')?.value || this.currentLocation.lng,
-            'form-lat': document.getElementById('form-lat')?.value || this.currentLocation.lat,
-            'form-clock-coordinates': document.getElementById('form-clock-coordinates')?.value || `${this.currentLocation.lng},${this.currentLocation.lat}`,
-            'form-clock-address': document.getElementById('form-clock-address')?.value || '',
-            'form-province-code': document.getElementById('form-province-code')?.value || '',
-            'form-province-short': document.getElementById('form-province-short')?.value || '',
-            'form-city-code': document.getElementById('form-city-code')?.value || '',
-            'form-city-name': document.getElementById('form-city-name')?.value || ''
+        const locationAddress = document.getElementById('locationAddress');
+        const address = locationAddress ? locationAddress.textContent : '未知位置';
+        
+        // 优先使用保存在对象中的表单数据
+        const formData = this.formData || {
+            'form-address': '',
+            'form-lng': this.currentLocation.lng,
+            'form-lat': this.currentLocation.lat,
+            'form-clock-coordinates': `${this.currentLocation.lng},${this.currentLocation.lat}`,
+            'form-clock-address': '',
+            'form-province-code': '',
+            'form-province-short': '',
+            'form-city-code': '',
+            'form-city-name': ''
         };
         
-        console.log('提交位置数据:', formData);
+        // 如果表单中有值，优先使用表单中的值
+        const result = {
+            'form-address': document.getElementById('form-address')?.value || formData['form-address'] || address,
+            'form-lng': document.getElementById('form-lng')?.value || formData['form-lng'] || this.currentLocation.lng,
+            'form-lat': document.getElementById('form-lat')?.value || formData['form-lat'] || this.currentLocation.lat,
+            'form-clock-coordinates': document.getElementById('form-clock-coordinates')?.value || formData['form-clock-coordinates'] || `${this.currentLocation.lng},${this.currentLocation.lat}`,
+            'form-clock-address': document.getElementById('form-clock-address')?.value || formData['form-clock-address'] || address,
+            'form-province-code': document.getElementById('form-province-code')?.value || formData['form-province-code'] || '',
+            'form-province-short': document.getElementById('form-province-short')?.value || formData['form-province-short'] || '',
+            'form-city-code': document.getElementById('form-city-code')?.value || formData['form-city-code'] || '',
+            'form-city-name': document.getElementById('form-city-name')?.value || formData['form-city-name'] || ''
+        };
         
-        return formData;
+        console.log('提交位置数据:', result);
+        
+        return result;
     }
 
     /**
