@@ -92,8 +92,9 @@ class MapManager {
         // 地图点击事件
         this.map.on('click', (e) => {
             const { lng, lat } = e.lnglat;
+            console.log('地图点击位置:', { lng, lat });
             this.updateLocation(lng, lat);
-            this.reverseGeocode(lng, lat);
+            this.getAddressByCoords([lng, lat]);
         });
     }
 
@@ -107,21 +108,119 @@ class MapManager {
         }
 
         console.log('开始获取当前位置...');
-        
+
+        // 先检查浏览器是否支持地理位置API
+        if (!navigator.geolocation) {
+            console.error('浏览器不支持地理位置API');
+            this.showError('您的浏览器不支持地理位置功能');
+            return;
+        }
+
+        // 检查权限状态
+        if (navigator.permissions) {
+            navigator.permissions.query({name: 'geolocation'}).then((result) => {
+                console.log('地理位置权限状态:', result.state);
+                if (result.state === 'denied') {
+                    this.showError('地理位置权限被拒绝，请在浏览器设置中允许位置访问');
+                    return;
+                }
+            });
+        }
+
         this.geolocation.getCurrentPosition((status, result) => {
+            console.log('高德定位回调 - 状态:', status, '结果:', result);
+
             if (status === 'complete') {
                 const { lng, lat } = result.position;
                 console.log('获取位置成功:', { lng, lat });
-                
+
                 this.updateLocation(lng, lat);
                 this.map.setCenter([lng, lat]);
-                this.reverseGeocode(lng, lat);
-                
+                this.getAddressByCoords([lng, lat]);
+
             } else {
                 console.error('定位失败:', result);
-                this.showError('定位失败: ' + (result.message || '未知错误'));
+                console.error('错误详情:', {
+                    message: result.message,
+                    info: result.info,
+                    status: status
+                });
+
+                // 提供更详细的错误信息
+                let errorMessage = '定位失败';
+                if (result.message) {
+                    if (result.message.includes('User denied')) {
+                        errorMessage = '用户拒绝了位置权限请求，请允许位置访问后重试';
+                    } else if (result.message.includes('timeout')) {
+                        errorMessage = '定位超时，请检查网络连接或重试';
+                    } else if (result.message.includes('unavailable')) {
+                        errorMessage = '位置服务不可用，请检查设备GPS设置';
+                    } else {
+                        errorMessage = '定位失败: ' + result.message;
+                    }
+                } else {
+                    errorMessage = '定位失败，请确保已允许位置权限并重试';
+                }
+
+                this.showError(errorMessage);
+
+                // 尝试使用浏览器原生定位作为备选方案
+                this.tryNativeGeolocation();
             }
         });
+    }
+
+    /**
+     * 尝试使用浏览器原生地理位置API作为备选方案
+     */
+    tryNativeGeolocation() {
+        console.log('尝试使用浏览器原生地理位置API...');
+
+        if (!navigator.geolocation) {
+            console.error('浏览器不支持原生地理位置API');
+            return;
+        }
+
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        };
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                console.log('原生定位成功:', position);
+                const { longitude: lng, latitude: lat } = position.coords;
+
+                this.updateLocation(lng, lat);
+                this.map.setCenter([lng, lat]);
+                this.getAddressByCoords([lng, lat]);
+
+                this.showMessage('已使用浏览器定位获取位置', 'success');
+            },
+            (error) => {
+                console.error('原生定位也失败:', error);
+                let errorMessage = '无法获取位置信息';
+
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = '位置权限被拒绝，请在浏览器地址栏点击位置图标允许访问';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = '位置信息不可用，请检查设备GPS设置';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = '获取位置超时，请重试';
+                        break;
+                    default:
+                        errorMessage = '获取位置失败: ' + error.message;
+                        break;
+                }
+
+                this.showError(errorMessage);
+            },
+            options
+        );
     }
 
     /**
@@ -146,8 +245,8 @@ class MapManager {
                 this.updateLocation(lng, lat);
                 this.map.setCenter([lng, lat]);
                 
-                // 更新位置信息
-                this.updateLocationInfo(poi.name, lng, lat);
+                // 获取详细地址信息
+                this.getAddressByCoords([lng, lat]);
                 
                 // 添加到搜索历史
                 this.addToSearchHistory({
@@ -165,21 +264,7 @@ class MapManager {
         });
     }
 
-    /**
-     * 逆地理编码（根据坐标获取地址）
-     */
-    reverseGeocode(lng, lat) {
-        this.geocoder.getAddress([lng, lat], (status, result) => {
-            if (status === 'complete' && result.regeocode) {
-                const address = result.regeocode.formattedAddress;
-                console.log('逆地理编码成功:', address);
-                this.updateLocationInfo(address, lng, lat);
-            } else {
-                console.error('逆地理编码失败:', result);
-                this.updateLocationInfo('未知位置', lng, lat);
-            }
-        });
-    }
+
 
     /**
      * 更新地图标记位置
@@ -190,17 +275,32 @@ class MapManager {
             this.map.remove(this.marker);
         }
 
-        // 创建新标记
+        // 创建新标记，支持拖拽
         this.marker = new AMap.Marker({
             position: [lng, lat],
-            title: '当前位置'
+            title: '当前位置',
+            draggable: true, // 启用拖拽
+            cursor: 'move'
+        });
+
+        // 添加标记拖拽事件
+        this.marker.on('dragend', (e) => {
+            const { lng: newLng, lat: newLat } = e.lnglat;
+            console.log('标记拖拽到新位置:', { lng: newLng, lat: newLat });
+
+            // 更新位置信息
+            this.currentLocation = { lng: newLng, lat: newLat };
+            this.updateCoordinatesDisplay(newLng, newLat);
+
+            // 获取新位置的地址信息
+            this.getAddressByCoords([newLng, newLat]);
         });
 
         this.map.add(this.marker);
-        
+
         // 保存当前位置
         this.currentLocation = { lng, lat };
-        
+
         // 更新坐标显示
         this.updateCoordinatesDisplay(lng, lat);
     }
@@ -225,6 +325,158 @@ class MapManager {
         if (submitBtn) {
             submitBtn.disabled = false;
         }
+    }
+
+    /**
+     * 根据坐标获取地址信息（按照原项目实现）
+     */
+    getAddressByCoords(position) {
+        console.log('开始根据坐标获取地址:', position);
+
+        if (!this.geocoder) {
+            console.error('地理编码器未初始化');
+            this.showLocationInfo('未知位置', '地理编码器未初始化', position);
+            return;
+        }
+
+        // 确保position是AMap.LngLat对象或数组格式
+        let lngLatPosition;
+        if (Array.isArray(position)) {
+            lngLatPosition = new AMap.LngLat(position[0], position[1]);
+        } else if (position.lng !== undefined && position.lat !== undefined) {
+            lngLatPosition = new AMap.LngLat(position.lng, position.lat);
+        } else {
+            lngLatPosition = position;
+        }
+
+        this.geocoder.getAddress(lngLatPosition, (status, result) => {
+            console.log('逆地理编码状态:', status, '结果:', result);
+
+            if (status === 'complete' && result.info === 'OK') {
+                const regeocode = result.regeocode;
+                const address = regeocode.formattedAddress;
+
+                // 按照原项目实现，优先获取township作为位置名称
+                const addressComponent = regeocode.addressComponent;
+                const name = addressComponent.township ||
+                           addressComponent.district ||
+                           addressComponent.city ||
+                           addressComponent.province ||
+                           '未知位置';
+
+                console.log('获取地址成功:', { name, address, addressComponent });
+
+                // 获取坐标值
+                const lng = lngLatPosition.getLng ? lngLatPosition.getLng() : lngLatPosition.lng;
+                const lat = lngLatPosition.getLat ? lngLatPosition.getLat() : lngLatPosition.lat;
+
+                // 更新位置信息显示
+                this.updateLocationInfo(address, lng, lat);
+
+                // 显示信息窗口
+                this.showLocationInfo(name, address, [lng, lat]);
+
+                // 获取省市信息并更新表单（参考原项目）
+                this.updateFormWithAddressInfo(addressComponent, lng, lat, address);
+
+            } else {
+                console.error('逆地理编码失败:', { status, result });
+                const lng = lngLatPosition.getLng ? lngLatPosition.getLng() : lngLatPosition.lng;
+                const lat = lngLatPosition.getLat ? lngLatPosition.getLat() : lngLatPosition.lat;
+                const coords = `${lng.toFixed(6)}, ${lat.toFixed(6)}`;
+                this.updateLocationInfo(`坐标位置 (${coords})`, lng, lat);
+                this.showLocationInfo('未知位置', `坐标: ${coords}`, [lng, lat]);
+            }
+        });
+    }
+
+    /**
+     * 更新表单的地址信息（参考原项目实现）
+     */
+    updateFormWithAddressInfo(addressComponent, lng, lat, address) {
+        try {
+            // 获取省市信息
+            const provinceCode = addressComponent.adcode ? addressComponent.adcode.substring(0, 2) + '0000' : '000000';
+            const cityCode = addressComponent.adcode ? addressComponent.adcode.substring(0, 4) + '00' : '000000';
+            const cityName = addressComponent.city || '';
+            const provinceShort = this.getProvinceShort(addressComponent.province);
+
+            // 更新隐藏表单字段（如果存在）
+            const formElements = {
+                'form-lng': lng,
+                'form-lat': lat,
+                'form-address': address,
+                'form-clock-coordinates': `${lng},${lat}`,
+                'form-clock-address': address,
+                'form-province-code': provinceCode,
+                'form-province-short': provinceShort,
+                'form-city-code': cityCode,
+                'form-city-name': cityName
+            };
+
+            Object.entries(formElements).forEach(([id, value]) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.value = value;
+                }
+            });
+
+            console.log('表单信息已更新:', formElements);
+        } catch (error) {
+            console.error('更新表单信息失败:', error);
+        }
+    }
+
+    /**
+     * 获取省份简称（参考原项目实现）
+     */
+    getProvinceShort(province) {
+        const provinceToShortMap = {
+            "北京市": "京", "天津市": "津", "河北省": "冀", "山西省": "晋",
+            "内蒙古自治区": "蒙", "辽宁省": "辽", "吉林省": "吉", "黑龙江省": "黑",
+            "上海市": "沪", "江苏省": "苏", "浙江省": "浙", "安徽省": "皖",
+            "福建省": "闽", "江西省": "赣", "山东省": "鲁", "河南省": "豫",
+            "湖北省": "鄂", "湖南省": "湘", "广东省": "粤", "广西壮族自治区": "桂",
+            "海南省": "琼", "重庆市": "渝", "四川省": "川", "贵州省": "贵",
+            "云南省": "云", "西藏自治区": "藏", "陕西省": "陕", "甘肃省": "甘",
+            "青海省": "青", "宁夏回族自治区": "宁", "新疆维吾尔自治区": "新",
+            "香港特别行政区": "港", "澳门特别行政区": "澳", "台湾省": "台"
+        };
+
+        return province && provinceToShortMap[province] ?
+               provinceToShortMap[province] :
+               (province ? province.substring(0, 1) : '');
+    }
+
+    /**
+     * 显示位置信息窗口
+     */
+    showLocationInfo(name, address, position) {
+        // 移除旧的信息窗口
+        if (this.infoWindow) {
+            this.infoWindow.close();
+        }
+
+        // 创建信息窗口内容
+        const content = `
+            <div style="padding: 10px; min-width: 200px;">
+                <h3 style="margin: 0 0 8px 0; color: #333; font-size: 16px;">${name}</h3>
+                <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.4;">${address}</p>
+                <div style="margin-top: 8px; font-size: 12px; color: #999;">
+                    坐标: ${position[0].toFixed(6)}, ${position[1].toFixed(6)}
+                </div>
+            </div>
+        `;
+
+        // 创建信息窗口
+        this.infoWindow = new AMap.InfoWindow({
+            content: content,
+            offset: new AMap.Pixel(0, -30),
+            closeWhenClickMap: true
+        });
+
+        // 在指定位置打开信息窗口
+        this.infoWindow.open(this.map, position);
     }
 
     /**
