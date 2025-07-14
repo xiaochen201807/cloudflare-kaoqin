@@ -88,7 +88,7 @@ class MapManager {
         // 初始化定位
         this.geolocation = new AMap.Geolocation({
             enableHighAccuracy: true,
-            timeout: 10000,
+            timeout: 30000, // 直接在这里设置超时时间为30秒
             maximumAge: 0,
             convert: true,
 
@@ -146,7 +146,18 @@ if (!navigator.geolocation) {
         }
 
         // 增加超时时间到30秒，解决某些网络环境下定位超时问题
-        this.geolocation.setTimeout(30000);
+        // 注意：不是所有版本的高德地图API都支持setTimeout方法
+        try {
+            // 尝试设置超时时间，如果不支持则忽略
+            if (typeof this.geolocation.setTimeout === 'function') {
+                this.geolocation.setTimeout(30000);
+            } else {
+                console.log('当前版本的高德地图API不支持setTimeout方法，使用默认超时时间');
+                // 可以尝试使用其他方式设置超时时间，例如在创建geolocation实例时设置
+            }
+        } catch (error) {
+            console.error('设置超时时间失败:', error);
+        }
         
         this.geolocation.getCurrentPosition((status, result) => {
             console.log('高德定位回调 - 状态:', status, '结果:', result);
@@ -156,7 +167,7 @@ if (!navigator.geolocation) {
                 console.log('获取位置成功:', { lng, lat });
 
                 this.updateLocation(lng, lat);
-                this.map.setCenter([lng, lat]);
+        this.map.setCenter([lng, lat]);
                 this.getAddressByCoords([lng, lat], true); // 添加参数，表示需要自动显示信息窗口
 
             } else {

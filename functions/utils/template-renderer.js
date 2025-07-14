@@ -84,6 +84,41 @@ const TEMPLATES = {
     </script>
     <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key={{AMAP_KEY}}&plugin=AMap.PlaceSearch,AMap.ToolBar,AMap.Scale,AMap.Geocoder,AMap.Geolocation"></script>
     <link rel="stylesheet" href="/css/index.css">
+    <style>
+        .user-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logout-btn {
+            background: transparent;
+            color: #666;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .logout-btn:hover {
+            background: #f5f5f5;
+        }
+        
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .panel-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .user-info {
+                margin-top: 10px;
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="main-container">
@@ -97,7 +132,10 @@ const TEMPLATES = {
             <!-- 面板头部 -->
             <div class="panel-header">
                 <h1>📍 考勤打卡</h1>
-                <div class="user-name" id="userDisplayName">加载中...</div>
+                <div class="user-info">
+                    <span class="user-name" id="userDisplayName">加载中...</span>
+                    <button class="logout-btn" onclick="logout()" title="退出登录">退出</button>
+                </div>
             </div>
 
             <!-- 搜索区域 -->
@@ -111,7 +149,6 @@ const TEMPLATES = {
                 <div class="coord-section">
                     <div class="section-title">
                         📍 当前位置坐标
-                        <button class="clear-btn" onclick="getCurrentCoordinates()" title="获取当前位置">定位</button>
                     </div>
                     <div class="current-coords" id="currentCoords">
                         <small>请先搜索位置或获取当前位置</small>
@@ -159,10 +196,6 @@ const TEMPLATES = {
                     <input type="text" id="realName" name="realName" placeholder="请输入您的真实姓名" required>
                 </div>
 
-                <button class="btn btn-secondary" id="refreshLocationBtn" onclick="refreshLocation()">
-                    🔄 刷新位置
-                </button>
-
                 <button class="btn btn-primary" id="submitLocationBtn" onclick="submitLocation()" disabled>
                     ✅ 提交打卡
                 </button>
@@ -170,7 +203,7 @@ const TEMPLATES = {
 
             <!-- 面板底部 -->
             <div class="panel-footer">
-                <button class="logout-btn" onclick="logout()">退出登录</button>
+                <div class="version">版本 v1.0.0</div>
             </div>
         </div>
     </div>
