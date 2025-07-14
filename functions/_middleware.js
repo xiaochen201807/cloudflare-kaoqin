@@ -80,9 +80,30 @@ export async function onRequest(context) {
       }
     }
 
-    // 有provider参数，继续处理OAuth流程
-    console.log(`有provider参数(${provider})，继续处理OAuth流程`);
-    return await next();
+    // 有provider参数，根据provider类型路由到对应的处理函数
+    console.log(`有provider参数(${provider})，路由到对应的OAuth处理`);
+
+    if (provider === 'github') {
+      // GitHub登录，路由到 /login 处理
+      console.log("路由到GitHub登录处理");
+      return await next();
+    } else if (provider === 'gitee') {
+      // Gitee登录，需要重定向到 /gitee-login
+      console.log("重定向到Gitee登录处理");
+      const giteeUrl = new URL(request.url);
+      giteeUrl.pathname = '/gitee-login';
+      giteeUrl.searchParams.delete('provider'); // 移除provider参数
+
+      return new Response("", {
+        status: 302,
+        headers: {
+          "Location": giteeUrl.toString()
+        }
+      });
+    } else {
+      console.log(`未知的provider: ${provider}`);
+      return new Response("不支持的登录方式", { status: 400 });
+    }
   }
 
   // 处理 gitee-login 路径
