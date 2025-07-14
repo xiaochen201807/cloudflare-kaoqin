@@ -1,5 +1,6 @@
 /**
  * 高德地图功能模块
+
  * 负责地图初始化、搜索、定位、坐标显示等核心地图功能
  */
 
@@ -12,19 +13,24 @@ class MapManager {
         this.geolocation = null;
         this.currentLocation = null;
         this.searchHistory = this.loadSearchHistory();
+
         this.favoriteLocations = this.loadFavoriteLocations();
         
         this.init();
+
     }
 
     /**
      * 初始化地图
      */
+
     async init() {
         try {
             console.log('开始初始化高德地图...');
             
+           
             // 等待高德地图API加载完成
+
             if (typeof AMap === 'undefined') {
                 console.error('高德地图API未加载');
                 this.showError('地图API加载失败，请刷新页面重试');
@@ -35,9 +41,11 @@ class MapManager {
             this.map = new AMap.Map('mapContainer', {
                 zoom: 15,
                 center: [116.397428, 39.90923], // 默认北京天安门
+
                 mapStyle: 'amap://styles/normal',
                 viewMode: '2D'
             });
+
 
             // 初始化插件
             this.initPlugins();
@@ -45,6 +53,7 @@ class MapManager {
             // 添加地图事件监听
             this.addMapEvents();
             
+
             // 尝试获取当前位置
             this.getCurrentLocation();
             
@@ -56,14 +65,17 @@ class MapManager {
         }
     }
 
+
     /**
      * 初始化地图插件
      */
+
     initPlugins() {
         // 初始化地点搜索
         this.placeSearch = new AMap.PlaceSearch({
             pageSize: 10,
             pageIndex: 1,
+
             city: '全国'
         });
 
@@ -71,6 +83,7 @@ class MapManager {
         this.geocoder = new AMap.Geocoder({
             city: '全国',
             radius: 1000
+
         });
 
         // 初始化定位
@@ -79,9 +92,11 @@ class MapManager {
             timeout: 10000,
             maximumAge: 0,
             convert: true,
+
             showButton: false,
             showMarker: false,
             showCircle: false
+
         });
     }
 
@@ -92,36 +107,40 @@ class MapManager {
         // 地图点击事件
         this.map.on('click', (e) => {
             const { lng, lat } = e.lnglat;
+
             console.log('地图点击位置:', { lng, lat });
             this.updateLocation(lng, lat);
             this.getAddressByCoords([lng, lat]);
-        });
+});
     }
 
     /**
      * 获取当前位置
      */
+
     getCurrentLocation() {
         if (!this.geolocation) {
             this.showError('定位服务未初始化');
             return;
         }
 
+
         console.log('开始获取当前位置...');
 
         // 先检查浏览器是否支持地理位置API
-        if (!navigator.geolocation) {
+if (!navigator.geolocation) {
             console.error('浏览器不支持地理位置API');
             this.showError('您的浏览器不支持地理位置功能');
             return;
         }
+
 
         // 检查权限状态
         if (navigator.permissions) {
             navigator.permissions.query({name: 'geolocation'}).then((result) => {
                 console.log('地理位置权限状态:', result.state);
                 if (result.state === 'denied') {
-                    this.showError('地理位置权限被拒绝，请在浏览器设置中允许位置访问');
+            this.showError('地理位置权限被拒绝，请在浏览器设置中允许位置访问');
                     return;
                 }
             });
@@ -135,16 +154,17 @@ class MapManager {
                 console.log('获取位置成功:', { lng, lat });
 
                 this.updateLocation(lng, lat);
-                this.map.setCenter([lng, lat]);
+        this.map.setCenter([lng, lat]);
                 this.getAddressByCoords([lng, lat]);
 
             } else {
                 console.error('定位失败:', result);
+
                 console.error('错误详情:', {
                     message: result.message,
                     info: result.info,
                     status: status
-                });
+        });
 
                 // 提供更详细的错误信息
                 let errorMessage = '定位失败';
@@ -158,7 +178,7 @@ class MapManager {
                     } else {
                         errorMessage = '定位失败: ' + result.message;
                     }
-                } else {
+        } else {
                     errorMessage = '定位失败，请确保已允许位置权限并重试';
                 }
 
@@ -167,10 +187,14 @@ class MapManager {
                 // 尝试使用浏览器原生定位作为备选方案
                 this.tryNativeGeolocation();
             }
-        });
+});
     }
 
+               
+           
+
     /**
+               
      * 尝试使用浏览器原生地理位置API作为备选方案
      */
     tryNativeGeolocation() {
@@ -247,7 +271,7 @@ class MapManager {
                 
                 // 获取详细地址信息
                 this.getAddressByCoords([lng, lat]);
-                
+        
                 // 添加到搜索历史
                 this.addToSearchHistory({
                     name: poi.name,
@@ -263,6 +287,7 @@ class MapManager {
             }
         });
     }
+
 
 
 
@@ -296,16 +321,19 @@ class MapManager {
             this.getAddressByCoords([newLng, newLat]);
         });
 
+
         this.map.add(this.marker);
 
         // 保存当前位置
         this.currentLocation = { lng, lat };
 
         // 更新坐标显示
+
         this.updateCoordinatesDisplay(lng, lat);
     }
 
     /**
+
      * 更新位置信息显示
      */
     updateLocationInfo(address, lng, lat) {
@@ -319,11 +347,12 @@ class MapManager {
         if (locationCoords) {
             locationCoords.textContent = `坐标: ${lng.toFixed(6)}, ${lat.toFixed(6)}`;
         }
+           
         
         // 启用提交按钮
         const submitBtn = document.getElementById('submitLocationBtn');
         if (submitBtn) {
-            submitBtn.disabled = false;
+    submitBtn.disabled = false;
         }
     }
 
@@ -395,22 +424,23 @@ class MapManager {
      */
     updateFormWithAddressInfo(addressComponent, lng, lat, address) {
         try {
-            // 获取省市信息
+// 获取省市信息
             const provinceCode = addressComponent.adcode ? addressComponent.adcode.substring(0, 2) + '0000' : '000000';
             const cityCode = addressComponent.adcode ? addressComponent.adcode.substring(0, 4) + '00' : '000000';
             const cityName = addressComponent.city || '';
             const provinceShort = this.getProvinceShort(addressComponent.province);
 
-            // 更新隐藏表单字段（如果存在）
+// 更新隐藏表单字段（如果存在）
             const formElements = {
+               
                 'form-lng': lng,
-                'form-lat': lat,
+'form-lat': lat,
                 'form-address': address,
                 'form-clock-coordinates': `${lng},${lat}`,
                 'form-clock-address': address,
                 'form-province-code': provinceCode,
                 'form-province-short': provinceShort,
-                'form-city-code': cityCode,
+'form-city-code': cityCode,
                 'form-city-name': cityName
             };
 
@@ -425,7 +455,7 @@ class MapManager {
         } catch (error) {
             console.error('更新表单信息失败:', error);
         }
-    }
+}
 
     /**
      * 获取省份简称（参考原项目实现）
@@ -441,13 +471,13 @@ class MapManager {
             "云南省": "云", "西藏自治区": "藏", "陕西省": "陕", "甘肃省": "甘",
             "青海省": "青", "宁夏回族自治区": "宁", "新疆维吾尔自治区": "新",
             "香港特别行政区": "港", "澳门特别行政区": "澳", "台湾省": "台"
-        };
-
+        };  
+  
         return province && provinceToShortMap[province] ?
                provinceToShortMap[province] :
                (province ? province.substring(0, 1) : '');
     }
-
+  
     /**
      * 显示位置信息窗口
      */
@@ -457,26 +487,22 @@ class MapManager {
             this.infoWindow.close();
         }
 
-        // 创建信息窗口内容
-        const content = `
-            <div style="padding: 10px; min-width: 200px;">
-                <h3 style="margin: 0 0 8px 0; color: #333; font-size: 16px;">${name}</h3>
-                <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.4;">${address}</p>
-                <div style="margin-top: 8px; font-size: 12px; color: #999;">
-                    坐标: ${position[0].toFixed(6)}, ${position[1].toFixed(6)}
-                </div>
-            </div>
-        `;
-
-        // 创建信息窗口
+        // 创建信息窗口 - 参考demo.html的简洁实现
         this.infoWindow = new AMap.InfoWindow({
-            content: content,
-            offset: new AMap.Pixel(0, -30),
-            closeWhenClickMap: true
+            content: `<div><h3>${name}</h3><p>${address}</p></div>`,
+            offset: new AMap.Pixel(0, -30)
         });
 
+        // 确保position是正确的格式
+        let lngLatPosition;
+        if (Array.isArray(position)) {
+            lngLatPosition = new AMap.LngLat(position[0], position[1]);
+        } else {
+            lngLatPosition = position;
+        }
+
         // 在指定位置打开信息窗口
-        this.infoWindow.open(this.map, position);
+        this.infoWindow.open(this.map, lngLatPosition);
     }
 
     /**
@@ -494,7 +520,7 @@ class MapManager {
         }
     }
 
-    /**
+
      * 添加到搜索历史
      */
     addToSearchHistory(location) {
@@ -502,11 +528,11 @@ class MapManager {
         const exists = this.searchHistory.find(item =>
             Math.abs(item.lng - location.lng) < 0.0001 &&
             Math.abs(item.lat - location.lat) < 0.0001
-        );
+        ); 
 
         if (!exists) {
             this.searchHistory.unshift(location);
-            // 限制历史记录数量
+            // 限制历史记录数量 
             if (this.searchHistory.length > 20) {
                 this.searchHistory = this.searchHistory.slice(0, 20);
             }
@@ -653,7 +679,7 @@ class MapManager {
     /**
      * 显示成功信息
      */
-    showSuccess(message) {
+    showSuccess(message) { 
         console.log(message);
         if (window.showMessage) {
             window.showMessage(message, 'success');
