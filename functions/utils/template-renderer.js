@@ -357,7 +357,7 @@ const TEMPLATES = {
         .view-toggle-btn {
             display: none;
             position: fixed;
-            bottom: 20px;
+            bottom: 80px; /* 修改：从20px改为80px，避免被底部操作栏遮挡 */
             right: 20px;
             width: 50px;
             height: 50px;
@@ -366,7 +366,7 @@ const TEMPLATES = {
             color: white;
             border: none;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
+            z-index: 1000; /* 确保按钮在顶层显示 */
             font-size: 20px;
             cursor: pointer;
             transition: background 0.3s;
