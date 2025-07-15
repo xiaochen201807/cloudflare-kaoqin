@@ -354,7 +354,8 @@ if (!navigator.geolocation) {
         const locationCoords = document.getElementById('locationCoords');
         
         if (locationAddress) {
-            locationAddress.textContent = address;
+            // 修改为设置输入框的值，而不是文本内容
+            locationAddress.value = address;
         }
         
         if (locationCoords) {
@@ -372,6 +373,59 @@ if (!navigator.geolocation) {
                 window.mainApp.syncMobileSubmitButton();
             }
         }
+    }
+
+    /**
+     * 切换地址编辑模式
+     */
+    toggleAddressEdit() {
+        const addressInput = document.getElementById('locationAddress');
+        const editBtn = document.getElementById('editAddressBtn');
+        
+        if (!addressInput || !editBtn) return;
+        
+        const isEditing = !addressInput.disabled;
+        
+        if (isEditing) {
+            // 当前是编辑模式，需要保存
+            this.saveEditedAddress();
+            addressInput.disabled = true;
+            editBtn.innerHTML = '✏️';
+            editBtn.title = '编辑地址';
+            editBtn.classList.remove('save-mode');
+        } else {
+            // 当前是查看模式，切换到编辑模式
+            addressInput.disabled = false;
+            addressInput.focus();
+            editBtn.innerHTML = '💾';
+            editBtn.title = '保存地址';
+            editBtn.classList.add('save-mode');
+        }
+    }
+    
+    /**
+     * 保存编辑后的地址
+     */
+    saveEditedAddress() {
+        const addressInput = document.getElementById('locationAddress');
+        if (!addressInput || !this.currentLocation) return;
+        
+        const editedAddress = addressInput.value.trim();
+        if (!editedAddress) {
+            this.showError('地址不能为空');
+            return;
+        }
+        
+        console.log('保存编辑后的地址:', editedAddress);
+        
+        // 更新表单数据中的地址
+        if (this.formData) {
+            this.formData['form-address'] = editedAddress;
+            this.formData['form-clock-address'] = editedAddress;
+        }
+        
+        // 显示成功消息
+        this.showSuccess('地址已更新');
     }
 
     /**
@@ -648,7 +702,8 @@ if (!navigator.geolocation) {
         
         // 获取表单中已经设置的值
         const locationAddress = document.getElementById('locationAddress');
-        const address = locationAddress ? locationAddress.textContent : '未知位置';
+        // 使用输入框的值作为地址
+        const address = locationAddress ? locationAddress.value : '未知位置';
         
         // 优先使用保存在对象中的表单数据
         const formData = this.formData || {
@@ -663,13 +718,17 @@ if (!navigator.geolocation) {
             'form-city-name': ''
         };
         
+        // 始终使用最新的地址
+        formData['form-address'] = address;
+        formData['form-clock-address'] = address;
+        
         // 如果表单中有值，优先使用表单中的值
         const result = {
-            'form-address': document.getElementById('form-address')?.value || formData['form-address'] || address,
+            'form-address': address,
             'form-lng': document.getElementById('form-lng')?.value || formData['form-lng'] || this.currentLocation.lng,
             'form-lat': document.getElementById('form-lat')?.value || formData['form-lat'] || this.currentLocation.lat,
             'form-clock-coordinates': document.getElementById('form-clock-coordinates')?.value || formData['form-clock-coordinates'] || `${this.currentLocation.lng},${this.currentLocation.lat}`,
-            'form-clock-address': document.getElementById('form-clock-address')?.value || formData['form-clock-address'] || address,
+            'form-clock-address': address,
             'form-province-code': document.getElementById('form-province-code')?.value || formData['form-province-code'] || '',
             'form-province-short': document.getElementById('form-province-short')?.value || formData['form-province-short'] || '',
             'form-city-code': document.getElementById('form-city-code')?.value || formData['form-city-code'] || '',
@@ -768,6 +827,13 @@ window.getCurrentCoordinates = function() {
 window.favoriteCurrentLocation = function() {
     if (window.mapManager) {
         window.mapManager.favoriteCurrentLocation();
+    }
+};
+
+// 添加地址编辑切换功能
+window.toggleAddressEdit = function() {
+    if (window.mapManager) {
+        window.mapManager.toggleAddressEdit();
     }
 };
 

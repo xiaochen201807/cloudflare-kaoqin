@@ -615,12 +615,95 @@ const TEMPLATES = {
                 <!-- 5. 当前位置信息 -->
                 <div class="location-info" id="locationInfo">
                     <h4>📍 当前位置</h4>
-                    <p id="locationAddress">正在获取位置信息...</p>
+                    <!-- 将静态文本改为可编辑的输入框，默认禁用 -->
+                    <div class="address-edit-container">
+                        <input type="text" id="locationAddress" class="address-input" disabled placeholder="正在获取位置信息...">
+                        <button class="action-btn edit-btn" id="editAddressBtn" onclick="toggleAddressEdit()" title="编辑地址">
+                            ✏️
+                        </button>
+                    </div>
                     <p class="coordinates" id="locationCoords">坐标: --</p>
-                    <button class="action-btn favorite-btn" id="favoriteCurrentBtn" onclick="favoriteCurrentLocation()" title="收藏当前位置">
-                        ⭐ 收藏
-                    </button>
+                    <div class="location-actions">
+                        <button class="action-btn favorite-btn" id="favoriteCurrentBtn" onclick="favoriteCurrentLocation()" title="收藏当前位置">
+                            ⭐ 收藏
+                        </button>
+                    </div>
                 </div>
+
+                <!-- 添加CSS样式 -->
+                <style>
+                    .address-edit-container {
+                        display: flex;
+                        margin-bottom: 10px;
+                    }
+                    
+                    .address-input {
+                        flex: 1;
+                        padding: 8px 10px;
+                        border: 1px solid #ddd;
+                        border-radius: 4px;
+                        font-size: 14px;
+                        background-color: #f9f9f9;
+                        transition: all 0.3s;
+                    }
+                    
+                    .address-input:disabled {
+                        background-color: #f9f9f9;
+                        color: #333;
+                        border-color: transparent;
+                    }
+                    
+                    .address-input:not(:disabled) {
+                        background-color: #fff;
+                        border-color: #667eea;
+                    }
+                    
+                    .edit-btn {
+                        margin-left: 8px;
+                        background-color: #f0f0f0;
+                        border: none;
+                        border-radius: 4px;
+                        width: 36px;
+                        height: 36px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        cursor: pointer;
+                        transition: background 0.3s;
+                    }
+                    
+                    .edit-btn:hover {
+                        background-color: #e0e0e0;
+                    }
+                    
+                    .edit-btn.save-mode {
+                        background-color: #4CAF50;
+                        color: white;
+                    }
+                    
+                    .edit-btn.save-mode:hover {
+                        background-color: #388E3C;
+                    }
+                    
+                    .location-actions {
+                        margin-top: 10px;
+                        display: flex;
+                        gap: 8px;
+                    }
+                    
+                    /* 移动端优化 */
+                    @media (max-width: 768px) {
+                        .address-input {
+                            font-size: 16px;
+                            padding: 10px;
+                        }
+                        
+                        .edit-btn {
+                            width: 44px;
+                            height: 44px;
+                        }
+                    }
+                </style>
             </div>
 
             <!-- 面板内容 -->
