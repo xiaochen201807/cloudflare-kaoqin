@@ -160,33 +160,6 @@ const TEMPLATES = {
             background: #f8f9fa;
         }
         
-        /* 统一输入框样式 */
-        .search-input, .name-input input {
-            width: 100%;
-            height: 44px;
-            padding: 0 16px 0 40px; /* 修改内边距，保持垂直居中 */
-            border: 2px solid transparent;
-            border-radius: 20px; /* 更圆润的边框 */
-            font-size: 15px;
-            box-sizing: border-box;
-            margin-bottom: 15px;
-            background: #f9f9f9;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
-            background-image: linear-gradient(to right, #fff, #fff), 
-                              linear-gradient(to right, #667eea, #764ba2);
-            background-origin: border-box;
-            background-clip: padding-box, border-box;
-            position: relative;
-            z-index: 1;
-            line-height: normal; /* 修改为normal，避免行高干扰 */
-        }
-        
-        /* 搜索输入框右侧留出按钮空间 */
-        .search-input {
-            padding-right: 50px;
-        }
-        
         /* 添加输入框内的固定图标 */
         .name-input, .search-container {
             position: relative;
@@ -246,6 +219,8 @@ const TEMPLATES = {
             align-items: center;
             justify-content: center;
             z-index: 3;
+            margin: 0; /* 移除外边距 */
+            padding: 0; /* 移除内边距 */
         }
         
         .search-btn:hover {
@@ -272,6 +247,7 @@ const TEMPLATES = {
             transition: opacity 0.3s;
             font-weight: 400;
             opacity: 0.8;
+            line-height: 44px; /* 确保占位符垂直居中 */
         }
         
         .search-input:focus::placeholder, .name-input input:focus::placeholder {
@@ -463,10 +439,11 @@ const TEMPLATES = {
             .search-input, .name-input input {
                 height: 50px;
                 font-size: 16px;
-                padding: 0 18px 0 42px; /* 增加左侧内边距，确保图标不重叠 */
+                padding: 0 46px 0 42px; /* 增加左侧内边距，确保图标不重叠 */
                 border-radius: 12px;
                 margin-bottom: 20px;
                 box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+                line-height: 50px; /* 确保文本垂直居中 */
             }
             
             /* 调整移动端图标大小和位置 */
@@ -479,9 +456,13 @@ const TEMPLATES = {
             }
             
             .search-btn {
-                padding: 12px;
-                border-radius: 10px;
-                right: 6px;
+                width: 44px;
+                height: 44px;
+                right: 3px;
+            }
+            
+            .search-input::placeholder, .name-input input::placeholder {
+                line-height: 50px; /* 确保占位符在移动端垂直居中 */
             }
             
             .name-input label {
