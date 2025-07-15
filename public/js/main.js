@@ -189,9 +189,8 @@ class MainApp {
      * 处理搜索
      */
     handleSearch() {
-        if (window.searchLocation) {
-            window.searchLocation();
-        }
+        // 直接调用全局searchLocation函数，现在它已经修复不会导致循环调用
+        window.searchLocation();
     }
 
     /**
@@ -760,8 +759,12 @@ window.refreshLocation = function() {
 };
 
 window.searchLocation = function() {
-    if (window.mainApp) {
-        window.mainApp.handleSearch();
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput && window.mapManager) {
+        const keyword = searchInput.value.trim();
+        window.mapManager.searchLocation(keyword);
+    } else {
+        console.error('搜索输入框或地图管理器未初始化');
     }
 };
 

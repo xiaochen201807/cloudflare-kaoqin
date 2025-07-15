@@ -327,38 +327,19 @@ const TEMPLATES = {
 
             <!-- 搜索区域 -->
             <div class="search-section">
+                <!-- 1. 真实姓名输入框 (优先显示) -->
+                <div class="name-input">
+                    <label for="realName">真实姓名:</label>
+                    <input type="text" id="realName" name="realName" placeholder="请输入您的真实姓名" required>
+                </div>
+                
+                <!-- 2. 搜索地点功能 -->
                 <div class="search-container">
                     <input type="text" id="searchInput" class="search-input" placeholder="搜索地点..." />
                     <button class="search-btn" onclick="searchLocation()">🔍</button>
                 </div>
 
-                <!-- 当前位置坐标显示 -->
-                <div class="coord-section">
-                    <div class="section-title">
-                        📍 当前位置坐标
-                    </div>
-                    <div class="current-coords" id="currentCoords">
-                        <small>请先搜索位置或获取当前位置</small>
-                    </div>
-                </div>
-
-                <!-- 搜索历史 - 改为可折叠面板 -->
-                <div class="collapsible-section">
-                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
-                        🕒 搜索历史
-                        <span class="toggle-icon">▼</span>
-                    </div>
-                    <div class="collapsible-content">
-                        <div class="section-actions">
-                            <button class="clear-btn" onclick="clearHistory()">清空</button>
-                        </div>
-                        <div class="history-list" id="historyList">
-                            <div style="padding: 20px; text-align: center; color: #999; font-size: 0.8em;">暂无搜索历史</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 收藏地点 - 改为可折叠面板 -->
+                <!-- 3. 收藏地点 - 可折叠面板 -->
                 <div class="collapsible-section">
                     <div class="collapsible-header" onclick="toggleCollapsible(this)">
                         ⭐ 收藏地点
@@ -373,12 +354,24 @@ const TEMPLATES = {
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- 面板内容 -->
-            <div class="panel-content">
-                <div id="statusMessage"></div>
-
+                
+                <!-- 4. 搜索历史 - 可折叠面板 -->
+                <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                        🕒 搜索历史
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="section-actions">
+                            <button class="clear-btn" onclick="clearHistory()">清空</button>
+                        </div>
+                        <div class="history-list" id="historyList">
+                            <div style="padding: 20px; text-align: center; color: #999; font-size: 0.8em;">暂无搜索历史</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 5. 当前位置信息 -->
                 <div class="location-info" id="locationInfo">
                     <h4>📍 当前位置</h4>
                     <p id="locationAddress">正在获取位置信息...</p>
@@ -387,11 +380,11 @@ const TEMPLATES = {
                         ⭐ 收藏
                     </button>
                 </div>
+            </div>
 
-                <div class="name-input">
-                    <label for="realName">真实姓名:</label>
-                    <input type="text" id="realName" name="realName" placeholder="请输入您的真实姓名" required>
-                </div>
+            <!-- 面板内容 -->
+            <div class="panel-content">
+                <div id="statusMessage"></div>
 
                 <button class="btn btn-primary" id="submitLocationBtn" onclick="submitLocation()" disabled>
                     ✅ 提交打卡

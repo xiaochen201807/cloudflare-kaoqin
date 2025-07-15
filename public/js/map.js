@@ -738,21 +738,12 @@ if (!navigator.geolocation) {
 // 全局地图管理器实例
 window.mapManager = null;
 
-// 全局搜索函数，确保在HTML中可以直接调用
-function searchLocation() {
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput && window.mapManager) {
-        window.mapManager.searchLocation(searchInput.value);
-    }
-}
-
-// 地图相关的全局函数
+// 地图初始化函数
 window.initMap = function() {
     window.mapManager = new MapManager();
 };
 
-window.searchLocation = searchLocation;
-
+// 全局函数，调用地图管理器方法
 window.getCurrentCoordinates = function() {
     if (window.mapManager) {
         window.mapManager.getCurrentLocation();
@@ -771,4 +762,10 @@ window.getLocationData = function() {
         return window.mapManager.getCurrentLocationData();
     }
     return null;
+};
+
+// 获取用户真实姓名的全局函数
+window.getUserRealName = function() {
+    const realNameInput = document.getElementById('realName');
+    return realNameInput ? realNameInput.value : '';
 };
