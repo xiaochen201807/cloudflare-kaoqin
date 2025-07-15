@@ -153,6 +153,23 @@ const TEMPLATES = {
 </head>
 <body>
     <div class="main-container">
+        <!-- 添加加载动画 -->
+        <div id="loading-spinner" class="loading-spinner">
+            <div class="spinner"></div>
+        </div>
+        
+        <!-- 添加结果显示罩层 -->
+        <div id="result-overlay" class="result-overlay">
+            <div class="result-container">
+                <div class="result-header">
+                    <div class="result-title">打卡结果</div>
+                    <button class="result-close" onclick="closeResultOverlay()">&times;</button>
+                </div>
+                <div id="result-content" class="result-content"></div>
+                <button class="btn btn-primary" onclick="closeResultOverlay()">确定</button>
+            </div>
+        </div>
+        
         <!-- 地图容器 -->
         <div class="map-container">
             <div id="mapContainer"></div>

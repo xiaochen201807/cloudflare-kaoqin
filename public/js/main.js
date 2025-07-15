@@ -121,10 +121,14 @@ class MainApp {
             this.isSubmitting = true;
             this.updateSubmitButton(true);
             
+            // 显示加载动画
+            document.getElementById('loading-spinner').style.display = 'flex';
+            
             // 获取用户真实姓名
             const realName = window.getUserRealName ? window.getUserRealName() : '';
             if (!realName || !realName.trim()) {
                 this.showMessage('请输入您的真实姓名', 'error');
+                document.getElementById('loading-spinner').style.display = 'none';
                 return;
             }
 
@@ -132,6 +136,7 @@ class MainApp {
             const locationData = window.getLocationData ? window.getLocationData() : null;
             if (!locationData) {
                 this.showMessage('请先选择一个位置', 'error');
+                document.getElementById('loading-spinner').style.display = 'none';
                 return;
             }
 
@@ -158,22 +163,25 @@ class MainApp {
 
             const result = await response.json();
 
-            if (response.ok && result.success) {
-                this.showMessage('打卡成功！', 'success');
-                console.log('提交成功:', result);
-                
-                // 可以在这里添加成功后的处理逻辑
-                this.handleSubmitSuccess(result);
-                
-            } else {
-                const errorMsg = result.message || '提交失败，请重试';
-                this.showMessage(errorMsg, 'error');
-                console.error('提交失败:', result);
-            }
+            // 隐藏加载动画
+            document.getElementById('loading-spinner').style.display = 'none';
+
+            // 显示结果罩层
+            this.showResultOverlay(result);
 
         } catch (error) {
             console.error('提交位置数据失败:', error);
             this.showMessage('提交失败: ' + error.message, 'error');
+            
+            // 隐藏加载动画
+            document.getElementById('loading-spinner').style.display = 'none';
+            
+            // 显示错误结果
+            this.showResultOverlay({
+                success: false,
+                message: '提交失败',
+                error: error.message
+            });
             
         } finally {
             this.isSubmitting = false;
@@ -359,6 +367,270 @@ class MainApp {
             statusMessage.style.display = 'none';
         }, type === 'error' ? 5000 : 3000);
     }
+
+    /**
+     * 显示结果罩层
+     */
+    showResultOverlay(data) {
+        const resultContent = document.getElementById('result-content');
+        resultContent.innerHTML = '';
+        
+        console.log("显示结果:", data);
+        
+        // 根据成功或失败显示不同的消息和样式
+        const statusMsg = document.createElement('div');
+        if (data.success) {
+            statusMsg.className = 'result-success';
+            statusMsg.textContent = data.message || '打卡成功！';
+        } else {
+            // 如果是需要确认的错误（如早退打卡确认）
+            if (data.needConfirm) {
+                statusMsg.className = 'warning-message';
+            } else {
+                statusMsg.className = 'result-error';
+            }
+            statusMsg.textContent = data.message || '打卡失败！';
+        }
+        resultContent.appendChild(statusMsg);
+        
+        // 如果有提示信息，显示提示
+        if (data.hint) {
+            const hintItem = document.createElement('div');
+            hintItem.className = 'result-item';
+            hintItem.innerHTML = `<span class="result-label">提示：</span> ${data.hint}`;
+            resultContent.appendChild(hintItem);
+        }
+        
+        // 格式化日期时间
+        const formatDateTime = (timestamp) => {
+            if (!timestamp) return '无数据';
+            if (typeof timestamp === 'string') return timestamp;
+            const date = new Date(timestamp);
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        };
+        
+        // 添加主要信息
+        const addResultItem = (label, value) => {
+            if (value === undefined || value === null) return;
+            
+            const item = document.createElement('div');
+            item.className = 'result-item';
+            item.innerHTML = `<span class="result-label">${label}：</span> ${value}`;
+            resultContent.appendChild(item);
+        };
+        
+        // 处理需要确认的情况
+        if (data.needConfirm && data.confirmData) {
+            console.log("需要确认，显示确认按钮");
+            
+            // 显示确认按钮
+            const confirmButtons = document.createElement('div');
+            confirmButtons.className = 'confirm-buttons';
+            
+            // 确认按钮
+            const confirmYesBtn = document.createElement('button');
+            confirmYesBtn.className = 'confirm-btn confirm-yes';
+            confirmYesBtn.textContent = '确认继续打卡';
+            confirmYesBtn.onclick = () => {
+                // 关闭当前结果显示
+                document.getElementById('result-overlay').style.display = 'none';
+                
+                // 显示加载动画
+                document.getElementById('loading-spinner').style.display = 'flex';
+                
+                // 获取表单数据
+                const realName = window.getUserRealName ? window.getUserRealName() : '';
+                const locationData = window.getLocationData ? window.getLocationData() : {};
+                
+                // 准备提交数据
+                const formData = {
+                    realName: realName.trim(),
+                    ...locationData,
+                    type: 'checkin',
+                    timestamp: new Date().toISOString(),
+                    // 添加确认信息
+                    confirmed: true,
+                    confirmData: data.confirmData
+                };
+                
+                console.log("发送确认请求:", formData);
+                
+                // 重新提交请求
+                fetch('/api/submit-location', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData),
+                })
+                .then(response => response.json())
+                .then(newData => {
+                    // 隐藏加载动画
+                    document.getElementById('loading-spinner').style.display = 'none';
+                    
+                    // 显示新结果
+                    this.showResultOverlay(newData);
+                })
+                .catch(error => {
+                    // 隐藏加载动画
+                    document.getElementById('loading-spinner').style.display = 'none';
+                    
+                    // 显示错误信息
+                    this.showResultOverlay({
+                        success: false,
+                        message: '提交失败',
+                        error: error.message
+                    });
+                });
+            };
+            
+            // 取消按钮
+            const confirmNoBtn = document.createElement('button');
+            confirmNoBtn.className = 'confirm-btn confirm-no';
+            confirmNoBtn.textContent = '取消打卡';
+            confirmNoBtn.onclick = function() {
+                // 关闭当前结果显示
+                document.getElementById('result-overlay').style.display = 'none';
+            };
+            
+            confirmButtons.appendChild(confirmYesBtn);
+            confirmButtons.appendChild(confirmNoBtn);
+            resultContent.appendChild(confirmButtons);
+            
+            // 显示确认数据的详细信息
+            if (data.confirmData) {
+                const detailsTitle = document.createElement('div');
+                detailsTitle.style.fontWeight = 'bold';
+                detailsTitle.style.margin = '15px 0 10px 0';
+                detailsTitle.textContent = '打卡详情';
+                resultContent.appendChild(detailsTitle);
+                
+                // 显示关键确认信息
+                const confirmData = data.confirmData;
+                if (confirmData.dkrq) addResultItem('打卡日期', confirmData.dkrq);
+                if (confirmData.dksj) addResultItem('打卡时间', confirmData.dksj);
+                if (confirmData.jzsj) addResultItem('截止时间', confirmData.jzsj);
+                if (confirmData.dklx) addResultItem('打卡类型', confirmData.dklx === "1" ? "上班" : "下班");
+                if (confirmData.dkzt) addResultItem('打卡状态', this.getDkztText(confirmData.dkzt));
+                
+                // 显示原始消息
+                if (confirmData.msg) addResultItem('系统提示', confirmData.msg);
+            }
+        } else {
+            // 只有在成功时才显示详细结果
+            if (data.success) {
+                // 获取正确的结果数据
+                const resultData = data.result || data;
+                const results = resultData.results || [];
+                
+                // 如果有返回结果，显示详细信息
+                if (results && results.length > 0) {
+                    // 添加打卡记录标题
+                    const recordsTitle = document.createElement('div');
+                    recordsTitle.style.fontWeight = 'bold';
+                    recordsTitle.style.margin = '15px 0 10px 0';
+                    recordsTitle.textContent = `打卡记录 (共${results.length}条)`;
+                    resultContent.appendChild(recordsTitle);
+                    
+                    // 过滤有效的打卡记录
+                    const validRecords = results.filter(record => 
+                        record.dx_29_dxzt !== "15" // 15表示"无效"
+                    );
+                    
+                    // 按时间排序（最新的在前）
+                    validRecords.sort((a, b) => b.dx_29_dksj - a.dx_29_dksj);
+                    
+                    // 分类为上班和下班记录
+                    const clockInRecords = validRecords.filter(record => record.dx_29_dxlx === "1");
+                    const clockOutRecords = validRecords.filter(record => record.dx_29_dxlx === "2");
+                    
+                    // 如果没有有效记录
+                    if (validRecords.length === 0) {
+                        addResultItem('提示', '没有有效的打卡记录');
+                    } else {
+                        // 显示上班记录
+                        if (clockInRecords.length > 0) {
+                            const clockInTitle = document.createElement('div');
+                            clockInTitle.style.fontWeight = 'bold';
+                            clockInTitle.style.margin = '10px 0 5px 0';
+                            clockInTitle.style.color = '#4285f4';
+                            clockInTitle.textContent = '上班打卡';
+                            resultContent.appendChild(clockInTitle);
+                            
+                            clockInRecords.forEach(record => {
+                                const recordDiv = document.createElement('div');
+                                recordDiv.className = 'result-record';
+                                
+                                const recordContent = `
+                                    <div><span class="result-label">打卡时间：</span>${formatDateTime(record.dx_29_dksj)}</div>
+                                    <div><span class="result-label">打卡地点：</span>${record.dx_29_dkwz || '未知'}</div>
+                                    <div><span class="result-label">打卡状态：</span>${record.dx_29_dxztmc || '未知'}</div>
+                                    <div><span class="result-label">流水号：</span>${record.dx_29_ywlsh || '未知'}</div>
+                                `;
+                                
+                                recordDiv.innerHTML = recordContent;
+                                resultContent.appendChild(recordDiv);
+                            });
+                        }
+                        
+                        // 显示下班记录
+                        if (clockOutRecords.length > 0) {
+                            const clockOutTitle = document.createElement('div');
+                            clockOutTitle.style.fontWeight = 'bold';
+                            clockOutTitle.style.margin = '10px 0 5px 0';
+                            clockOutTitle.style.color = '#0f9d58';
+                            clockOutTitle.textContent = '下班打卡';
+                            resultContent.appendChild(clockOutTitle);
+                            
+                            clockOutRecords.forEach(record => {
+                                const recordDiv = document.createElement('div');
+                                recordDiv.className = 'result-record';
+                                
+                                const recordContent = `
+                                    <div><span class="result-label">打卡时间：</span>${formatDateTime(record.dx_29_dksj)}</div>
+                                    <div><span class="result-label">打卡地点：</span>${record.dx_29_dkwz || '未知'}</div>
+                                    <div><span class="result-label">打卡状态：</span>${record.dx_29_dxztmc || '未知'}</div>
+                                    <div><span class="result-label">流水号：</span>${record.dx_29_ywlsh || '未知'}</div>
+                                `;
+                                
+                                recordDiv.innerHTML = recordContent;
+                                resultContent.appendChild(recordDiv);
+                            });
+                        }
+                    }
+                } else {
+                    // 如果没有详细结果，只显示简单信息
+                    addResultItem('消息', resultData.msg || '操作成功');
+                }
+            } else if (data.error) {
+                // 显示错误详情
+                addResultItem('错误详情', data.error);
+            }
+        }
+        
+        // 显示罩层
+        document.getElementById('result-overlay').style.display = 'flex';
+    }
+
+    /**
+     * 获取打卡状态文本
+     */
+    getDkztText(dkzt) {
+        const statusMap = {
+            "1": "正常",
+            "2": "迟到",
+            "3": "严重迟到",
+            "4": "早退",
+            "5": "旷工",
+            "6": "未打卡",
+            "7": "休息日",
+            "8": "节假日",
+            "9": "外勤",
+            "10": "出差"
+        };
+        return statusMap[dkzt] || dkzt;
+    }
 }
 
 // 全局应用实例
@@ -409,6 +681,18 @@ window.showMessage = function(message, type) {
     if (window.mainApp) {
         window.mainApp.showMessage(message, type);
     }
+};
+
+// 添加全局结果显示函数
+window.showResultOverlay = function(data) {
+    if (window.mainApp) {
+        window.mainApp.showResultOverlay(data);
+    }
+};
+
+// 添加全局关闭结果罩层函数
+window.closeResultOverlay = function() {
+    document.getElementById('result-overlay').style.display = 'none';
 };
 
 // 页面加载完成后自动初始化应用
