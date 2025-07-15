@@ -7,6 +7,7 @@ class MainApp {
     constructor() {
         this.isSubmitting = false;
         this.messageTimeout = null;
+        this.isMobile = window.innerWidth <= 768;
         
         this.init();
     }
@@ -50,6 +51,9 @@ class MainApp {
         // 初始化搜索输入框
         this.initSearchInput();
         
+        // 初始化移动端功能
+        this.initMobileFeatures();
+        
         console.log('主应用初始化完成');
     }
 
@@ -73,6 +77,100 @@ class MainApp {
             realNameInput.addEventListener('input', () => {
                 this.validateForm();
             });
+        }
+        
+        // 监听窗口大小变化，更新移动端状态
+        window.addEventListener('resize', () => {
+            const wasMobile = this.isMobile;
+            this.isMobile = window.innerWidth <= 768;
+            
+            // 如果移动状态发生变化，重新初始化移动端功能
+            if (wasMobile !== this.isMobile) {
+                this.initMobileFeatures();
+            }
+        });
+    }
+
+    /**
+     * 初始化移动端功能
+     */
+    initMobileFeatures() {
+        if (!this.isMobile) return;
+        
+        console.log('初始化移动端功能...');
+        
+        // 初始化折叠面板
+        this.initCollapsiblePanels();
+        
+        // 初始化视图切换
+        this.initViewToggle();
+        
+        // 同步移动端底部提交按钮状态
+        this.syncMobileSubmitButton();
+    }
+    
+    /**
+     * 初始化折叠面板
+     */
+    initCollapsiblePanels() {
+        const collapsibles = document.querySelectorAll('.collapsible-section');
+        collapsibles.forEach(section => {
+            const header = section.querySelector('.collapsible-header');
+            const content = section.querySelector('.collapsible-content');
+            
+            // 默认收起
+            if (content && !content.style.maxHeight) {
+                content.style.maxHeight = '0px';
+            }
+        });
+    }
+    
+    /**
+     * 初始化视图切换
+     */
+    initViewToggle() {
+        const viewToggleBtn = document.getElementById('viewToggleBtn');
+        if (!viewToggleBtn) return;
+        
+        // 重置视图状态
+        const mainContainer = document.querySelector('.main-container');
+        if (mainContainer) {
+            mainContainer.classList.remove('fullscreen-map', 'fullscreen-panel');
+        }
+        
+        // 重置按钮状态
+        viewToggleBtn.innerHTML = '🗺️';
+        viewToggleBtn.title = '切换到地图视图';
+    }
+    
+    /**
+     * 同步移动端底部提交按钮状态
+     */
+    syncMobileSubmitButton() {
+        const mainSubmitBtn = document.getElementById('submitLocationBtn');
+        const mobileSubmitBtn = document.getElementById('mobileSubmitBtn');
+        
+        if (mainSubmitBtn && mobileSubmitBtn) {
+            mobileSubmitBtn.disabled = mainSubmitBtn.disabled;
+        }
+    }
+    
+    /**
+     * 切换折叠面板
+     */
+    toggleCollapsible(header) {
+        const section = header.parentElement;
+        const content = section.querySelector('.collapsible-content');
+        const toggleIcon = header.querySelector('.toggle-icon');
+        
+        if (content.style.maxHeight === '0px') {
+            content.style.maxHeight = '150px';
+            content.classList.add('expanded');
+            toggleIcon.textContent = '▲';
+        } else {
+            content.style.maxHeight = '0px';
+            content.classList.remove('expanded');
+            toggleIcon.textContent = '▼';
         }
     }
 
@@ -213,6 +311,13 @@ class MainApp {
             submitBtn.disabled = isSubmitting;
             submitBtn.textContent = isSubmitting ? '提交中...' : '✅ 提交打卡';
         }
+        
+        // 同步更新移动端底部提交按钮
+        const mobileSubmitBtn = document.getElementById('mobileSubmitBtn');
+        if (mobileSubmitBtn) {
+            mobileSubmitBtn.disabled = isSubmitting;
+            mobileSubmitBtn.textContent = isSubmitting ? '提交中...' : '✅ 提交打卡';
+        }
     }
 
     /**
@@ -221,12 +326,22 @@ class MainApp {
     validateForm() {
         const realNameInput = document.getElementById('realName');
         const submitBtn = document.getElementById('submitLocationBtn');
+        const mobileSubmitBtn = document.getElementById('mobileSubmitBtn');
         
-        if (realNameInput && submitBtn) {
+        if (realNameInput) {
             const hasName = realNameInput.value.trim().length > 0;
             const hasLocation = window.mapManager && window.mapManager.currentLocation;
+            const isDisabled = !hasName || !hasLocation;
             
-            submitBtn.disabled = !hasName || !hasLocation;
+            // 更新主提交按钮
+            if (submitBtn) {
+                submitBtn.disabled = isDisabled;
+            }
+            
+            // 更新移动端提交按钮
+            if (mobileSubmitBtn) {
+                mobileSubmitBtn.disabled = isDisabled;
+            }
         }
     }
 
@@ -644,6 +759,12 @@ window.refreshLocation = function() {
     }
 };
 
+window.searchLocation = function() {
+    if (window.mainApp) {
+        window.mainApp.handleSearch();
+    }
+};
+
 window.submitLocation = function() {
     if (window.mainApp) {
         window.mainApp.submitLocation();
@@ -699,7 +820,29 @@ window.closeResultOverlay = function() {
     document.getElementById('result-overlay').style.display = 'none';
 };
 
-// 页面加载完成后自动初始化应用
+// 添加折叠面板切换函数
+window.toggleCollapsible = function(header) {
+    if (window.mainApp) {
+        window.mainApp.toggleCollapsible(header);
+    } else {
+        // 如果mainApp不存在，使用简单的切换逻辑
+        const section = header.parentElement;
+        const content = section.querySelector('.collapsible-content');
+        const toggleIcon = header.querySelector('.toggle-icon');
+        
+        if (content.style.maxHeight === '0px') {
+            content.style.maxHeight = '150px';
+            content.classList.add('expanded');
+            toggleIcon.textContent = '▲';
+        } else {
+            content.style.maxHeight = '0px';
+            content.classList.remove('expanded');
+            toggleIcon.textContent = '▼';
+        }
+    }
+};
+
+// 在文档加载完成后初始化应用
 document.addEventListener('DOMContentLoaded', () => {
     window.mainApp = new MainApp();
 });

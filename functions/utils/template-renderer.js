@@ -135,8 +135,91 @@ const TEMPLATES = {
             overflow-y: auto;
         }
         
+        /* 移动端视图切换按钮 */
+        .view-toggle-btn {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .view-toggle-btn:hover {
+            background: #5a67d8;
+        }
+        
+        /* 折叠面板样式 */
+        .collapsible-section {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .collapsible-header {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+        }
+        
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        
+        .collapsible-content.expanded {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        /* 底部固定操作栏 */
+        .mobile-action-bar {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: white;
+            padding: 10px 15px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+        
         /* 移动端适配 */
         @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .checkin-panel {
+                width: 100%;
+                height: 50vh;
+                order: -1;
+                padding-bottom: 70px; /* 为底部操作栏留出空间 */
+            }
+            
+            .map-container {
+                height: 50vh;
+            }
+            
             .panel-header {
                 flex-wrap: wrap;
             }
@@ -147,6 +230,62 @@ const TEMPLATES = {
             
             .btn-primary {
                 margin-top: 10px;
+            }
+            
+            /* 显示移动端特有元素 */
+            .view-toggle-btn {
+                display: block;
+            }
+            
+            .mobile-action-bar {
+                display: block;
+            }
+            
+            /* 全屏模式类 */
+            .fullscreen-map .map-container {
+                height: 100vh;
+                z-index: 900;
+            }
+            
+            .fullscreen-map .checkin-panel {
+                display: none;
+            }
+            
+            .fullscreen-panel .checkin-panel {
+                height: 100vh;
+                z-index: 900;
+            }
+            
+            .fullscreen-panel .map-container {
+                display: none;
+            }
+            
+            /* 优化触摸元素尺寸 */
+            .search-btn, .action-btn, .clear-btn {
+                min-width: 44px;
+                min-height: 44px;
+                padding: 10px;
+            }
+            
+            .search-input {
+                height: 44px;
+                font-size: 16px;
+            }
+            
+            /* 增加按钮间距 */
+            .item-actions {
+                gap: 10px;
+            }
+        }
+        
+        /* 小屏幕设备额外优化 */
+        @media (max-width: 480px) {
+            .panel-header h1 {
+                font-size: 1.2em;
+            }
+            
+            .collapsible-section {
+                padding: 10px;
             }
         }
     </style>
@@ -203,25 +342,35 @@ const TEMPLATES = {
                     </div>
                 </div>
 
-                <!-- 搜索历史 -->
-                <div class="history-section">
-                    <div class="section-title">
+                <!-- 搜索历史 - 改为可折叠面板 -->
+                <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
                         🕒 搜索历史
-                        <button class="clear-btn" onclick="clearHistory()">清空</button>
+                        <span class="toggle-icon">▼</span>
                     </div>
-                    <div class="history-list" id="historyList">
-                        <div style="padding: 20px; text-align: center; color: #999; font-size: 0.8em;">暂无搜索历史</div>
+                    <div class="collapsible-content">
+                        <div class="section-actions">
+                            <button class="clear-btn" onclick="clearHistory()">清空</button>
+                        </div>
+                        <div class="history-list" id="historyList">
+                            <div style="padding: 20px; text-align: center; color: #999; font-size: 0.8em;">暂无搜索历史</div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- 收藏地点 -->
-                <div class="history-section">
-                    <div class="section-title">
+                <!-- 收藏地点 - 改为可折叠面板 -->
+                <div class="collapsible-section">
+                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
                         ⭐ 收藏地点
-                        <button class="clear-btn" onclick="clearFavorites()">清空</button>
+                        <span class="toggle-icon">▼</span>
                     </div>
-                    <div class="favorite-list" id="favoriteList">
-                        <div style="padding: 20px; text-align: center; color: #999; font-size: 0.8em;">暂无收藏地点</div>
+                    <div class="collapsible-content">
+                        <div class="section-actions">
+                            <button class="clear-btn" onclick="clearFavorites()">清空</button>
+                        </div>
+                        <div class="favorite-list" id="favoriteList">
+                            <div style="padding: 20px; text-align: center; color: #999; font-size: 0.8em;">暂无收藏地点</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -249,11 +398,65 @@ const TEMPLATES = {
                 </button>
             </div>
         </div>
+        
+        <!-- 移动端视图切换按钮 -->
+        <button class="view-toggle-btn" id="viewToggleBtn" title="切换视图">
+            🗺️
+        </button>
+        
+        <!-- 移动端底部操作栏 -->
+        <div class="mobile-action-bar">
+            <button class="btn btn-primary" id="mobileSubmitBtn" onclick="submitLocation()" disabled>
+                ✅ 提交打卡
+            </button>
+        </div>
     </div>
 
     <script src="/js/map.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/main.js"></script>
+    <script>
+        // 移动端优化脚本
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查是否为移动设备
+            const isMobile = window.innerWidth <= 768;
+            
+            if (isMobile) {
+                // 视图切换按钮
+                const viewToggleBtn = document.getElementById('viewToggleBtn');
+                if (!viewToggleBtn) return;
+                
+                let currentView = 'split'; // 'split', 'map', 'panel'
+                
+                viewToggleBtn.addEventListener('click', function() {
+                    const mainContainer = document.querySelector('.main-container');
+                    
+                    if (currentView === 'split') {
+                        // 切换到全屏地图
+                        mainContainer.classList.add('fullscreen-map');
+                        mainContainer.classList.remove('fullscreen-panel');
+                        viewToggleBtn.innerHTML = '📋';
+                        viewToggleBtn.title = '切换到面板视图';
+                        currentView = 'map';
+                    } else if (currentView === 'map') {
+                        // 切换到全屏面板
+                        mainContainer.classList.remove('fullscreen-map');
+                        mainContainer.classList.add('fullscreen-panel');
+                        viewToggleBtn.innerHTML = '🔄';
+                        viewToggleBtn.title = '切换到分屏视图';
+                        currentView = 'panel';
+                    } else {
+                        // 切换回分屏
+                        mainContainer.classList.remove('fullscreen-map');
+                        mainContainer.classList.remove('fullscreen-panel');
+                        viewToggleBtn.innerHTML = '🗺️';
+                        viewToggleBtn.title = '切换到地图视图';
+                        currentView = 'split';
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>`
 };
