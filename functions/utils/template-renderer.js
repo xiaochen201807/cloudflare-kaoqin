@@ -153,9 +153,10 @@ const TEMPLATES = {
         /* 统一输入框样式 */
         .search-input, .name-input input {
             width: 100%;
-            padding: 12px 16px 12px 40px; /* 左侧留出图标空间 */
+            height: 44px;
+            padding: 0 16px 0 40px; /* 修改内边距，保持垂直居中 */
             border: 2px solid transparent;
-            border-radius: 10px;
+            border-radius: 20px; /* 更圆润的边框 */
             font-size: 15px;
             box-sizing: border-box;
             margin-bottom: 15px;
@@ -168,6 +169,7 @@ const TEMPLATES = {
             background-clip: padding-box, border-box;
             position: relative;
             z-index: 1;
+            line-height: normal; /* 修改为normal，避免行高干扰 */
         }
         
         /* 搜索输入框右侧留出按钮空间 */
@@ -189,6 +191,7 @@ const TEMPLATES = {
             z-index: 2;
             font-size: 16px;
             pointer-events: none;
+            line-height: 1; /* 确保图标不受行高影响 */
         }
         
         .search-container::before {
@@ -200,68 +203,25 @@ const TEMPLATES = {
             z-index: 2;
             font-size: 16px;
             pointer-events: none;
+            line-height: 1; /* 确保图标不受行高影响 */
         }
         
-        .search-input:focus, .name-input input:focus {
-            outline: none;
-            background-color: #fff;
-            border-color: transparent;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-            transform: translateY(-2px);
-        }
-        
-        /* 增加焦点动画效果 */
-        .search-container::after, .name-input::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: linear-gradient(to right, #667eea, #764ba2);
-            transition: width 0.3s ease;
-            z-index: 2;
-            opacity: 0;
-        }
-        
-        .search-container:focus-within::after, .name-input:focus-within::after {
-            width: 100%;
-            opacity: 1;
-        }
-        
-        .search-input::placeholder, .name-input input::placeholder {
-            color: #666;
-            transition: opacity 0.3s, transform 0.3s;
-            font-weight: 400;
-        }
-        
-        .search-input:focus::placeholder, .name-input input:focus::placeholder {
-            opacity: 0.6;
-            transform: translateX(5px);
-        }
-        
-        /* 搜索容器优化 */
-        .search-container {
-            position: relative;
-            margin-bottom: 15px;
-            z-index: 1;
-        }
-        
-        /* 搜索按钮确保在最上层 */
+        /* 搜索按钮样式调整 */
         .search-btn {
             position: absolute;
-            right: 8px;
+            right: 2px; /* 调整右侧距离 */
             top: 50%;
             transform: translateY(-50%);
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
             color: white;
             border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%; /* 圆形按钮 */
             cursor: pointer;
             transition: all 0.3s;
             font-size: 16px;
-            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
+            box-shadow: 0 2px 6px rgba(76, 175, 80, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -269,14 +229,33 @@ const TEMPLATES = {
         }
         
         .search-btn:hover {
-            background: linear-gradient(135deg, #5a67d8 0%, #6b42a0 100%);
-            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
-            transform: translateY(-50%) scale(1.05);
+            background: linear-gradient(135deg, #43A047 0%, #2E7D32 100%);
+            box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
         }
         
         .search-btn:active {
             transform: translateY(-50%) scale(0.95);
-            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+            box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+        }
+        
+        /* 输入框焦点样式 */
+        .search-input:focus, .name-input input:focus {
+            outline: none;
+            background-color: #fff;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+        }
+        
+        /* 占位符样式 */
+        .search-input::placeholder, .name-input input::placeholder {
+            color: #666;
+            transition: opacity 0.3s;
+            font-weight: 400;
+            opacity: 0.8;
+        }
+        
+        .search-input:focus::placeholder, .name-input input:focus::placeholder {
+            opacity: 0.6;
         }
         
         /* 统一按钮样式 */
@@ -385,13 +364,14 @@ const TEMPLATES = {
             
             .checkin-panel {
                 width: 100%;
-                height: 50vh;
+                height: auto; /* 移除固定高度，改为自适应内容 */
                 order: -1;
                 padding-bottom: 70px; /* 为底部操作栏留出空间 */
             }
             
             .map-container {
-                height: 50vh;
+                height: calc(100vh - 70px); /* 70px是底部操作栏高度加上内边距 */
+                flex: 1;
             }
             
             .panel-header {
@@ -399,11 +379,17 @@ const TEMPLATES = {
             }
             
             .search-section {
-                max-height: calc(100vh - 320px);
+                max-height: none; /* 移除最大高度限制 */
+                overflow-y: visible;
             }
             
             /* 在移动端隐藏面板内容区域的提交按钮 */
             .panel-content .btn-primary {
+                display: none;
+            }
+            
+            /* 在移动端隐藏面板内容区域，因为已经移除提交按钮 */
+            .panel-content {
                 display: none;
             }
             
