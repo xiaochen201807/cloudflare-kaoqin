@@ -200,25 +200,49 @@ body {
     margin-top: 8px;
 }
 
+/* 折叠面板内容 */
+.collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.collapsible-content.expanded {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+/* 历史项目和收藏项目 */
 .history-item, .favorite-item {
-    padding: 10px 12px;
-    border-bottom: 1px solid #f0f0f0;
+    padding: 10px 15px;
+    border-bottom: 1px solid #eee;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 0.85em;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s;
 }
 
 .history-item:hover, .favorite-item:hover {
-    background: #f8f9fa;
-    transform: translateX(2px);
-    border-left: 3px solid #667eea;
+    background-color: #f0f0f0;
 }
 
 .history-item:last-child, .favorite-item:last-child {
     border-bottom: none;
+}
+
+.history-name, .favorite-name {
+    font-weight: 500;
+    margin-bottom: 3px;
+    color: #333;
+}
+
+.history-address, .favorite-address {
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 3px;
+}
+
+.history-time, .favorite-time {
+    font-size: 0.75em;
+    color: #999;
 }
 
 .item-text {

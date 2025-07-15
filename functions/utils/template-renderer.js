@@ -90,6 +90,9 @@ const TEMPLATES = {
             align-items: center;
             justify-content: flex-end;
             margin-left: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .logout-btn {
@@ -102,6 +105,8 @@ const TEMPLATES = {
             cursor: pointer;
             margin-left: 8px;
             transition: background 0.3s;
+            min-width: 40px;
+            white-space: nowrap;
         }
         
         .logout-btn:hover {
@@ -112,11 +117,16 @@ const TEMPLATES = {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
         
         .panel-header h1 {
-            margin-right: 10px;
+            font-size: 1.2em;
+            margin: 0;
             white-space: nowrap;
+            font-weight: 500;
         }
         
         /* 优化面板高度，避免滚动条 */
@@ -124,15 +134,189 @@ const TEMPLATES = {
             max-height: 100vh;
             display: flex;
             flex-direction: column;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            background: white;
         }
         
         .panel-content {
             flex: 1;
+            padding: 15px;
         }
         
         .search-section {
+            padding: 15px;
             max-height: calc(100vh - 280px);
             overflow-y: auto;
+            background: #f8f9fa;
+        }
+        
+        /* 统一输入框样式 */
+        .search-input, .name-input input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            font-size: 15px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            background-image: linear-gradient(to right, #fff, #fff), 
+                              linear-gradient(to right, #667eea, #764ba2);
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .search-input:focus, .name-input input:focus {
+            outline: none;
+            background-color: #fff;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        /* 增加焦点动画效果 */
+        .search-container::after, .name-input::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            transition: width 0.3s ease;
+            z-index: 2;
+            opacity: 0;
+        }
+        
+        .search-container:focus-within::after, .name-input:focus-within::after {
+            width: 100%;
+            opacity: 1;
+        }
+        
+        .search-input::placeholder, .name-input input::placeholder {
+            color: #aaa;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        
+        .search-input:focus::placeholder, .name-input input:focus::placeholder {
+            opacity: 0.6;
+            transform: translateX(5px);
+        }
+        
+        .name-input label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .name-input:hover label {
+            color: #667eea;
+        }
+        
+        /* 搜索容器优化 */
+        .search-container {
+            position: relative;
+            margin-bottom: 15px;
+            z-index: 1;
+        }
+        
+        .search-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .search-btn:hover {
+            background: linear-gradient(135deg, #5a67d8 0%, #6b42a0 100%);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+            transform: translateY(-50%) scale(1.05);
+        }
+        
+        .search-btn:active {
+            transform: translateY(-50%) scale(0.95);
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+        }
+        
+        /* 统一按钮样式 */
+        .btn, .search-btn, .action-btn, .clear-btn {
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        /* 主要按钮 */
+        .btn-primary, .search-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled), .search-btn:hover {
+            background: #388E3C;
+        }
+        
+        /* 统一折叠面板样式 */
+        .collapsible-section {
+            margin-bottom: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .collapsible-header {
+            padding: 12px 15px;
+            background: #f5f5f5;
+            font-weight: 500;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .section-actions {
+            padding: 8px 15px;
+            background: #f8f8f8;
+            border-bottom: 1px solid #eee;
+            text-align: right;
+        }
+        
+        /* 位置信息样式 */
+        .location-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .location-info h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
         }
         
         /* 移动端视图切换按钮 */
@@ -156,38 +340,6 @@ const TEMPLATES = {
         
         .view-toggle-btn:hover {
             background: #5a67d8;
-        }
-        
-        /* 折叠面板样式 */
-        .collapsible-section {
-            margin-top: 15px;
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border: 1px solid #e0e0e0;
-        }
-        
-        .collapsible-header {
-            font-size: 0.9em;
-            font-weight: 600;
-            color: #333;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #e0e0e0;
-            cursor: pointer;
-        }
-        
-        .collapsible-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out;
-        }
-        
-        .collapsible-content.expanded {
-            max-height: 150px;
-            overflow-y: auto;
         }
         
         /* 底部固定操作栏 */
@@ -228,8 +380,9 @@ const TEMPLATES = {
                 max-height: calc(100vh - 320px);
             }
             
-            .btn-primary {
-                margin-top: 10px;
+            /* 在移动端隐藏面板内容区域的提交按钮 */
+            .panel-content .btn-primary {
+                display: none;
             }
             
             /* 显示移动端特有元素 */
@@ -267,9 +420,25 @@ const TEMPLATES = {
                 padding: 10px;
             }
             
-            .search-input {
-                height: 44px;
+            /* 移动端输入框优化 */
+            .search-input, .name-input input {
+                height: 50px;
                 font-size: 16px;
+                padding: 12px 18px;
+                border-radius: 12px;
+                margin-bottom: 20px;
+                box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            }
+            
+            .search-btn {
+                padding: 12px;
+                border-radius: 10px;
+                right: 6px;
+            }
+            
+            .name-input label {
+                font-size: 15px;
+                margin-bottom: 10px;
             }
             
             /* 增加按钮间距 */
@@ -281,11 +450,11 @@ const TEMPLATES = {
         /* 小屏幕设备额外优化 */
         @media (max-width: 480px) {
             .panel-header h1 {
-                font-size: 1.2em;
+                font-size: 1.1em;
             }
             
             .collapsible-section {
-                padding: 10px;
+                padding: 0;
             }
         }
     </style>
