@@ -422,6 +422,11 @@ if (!navigator.geolocation) {
 
                 // 获取省市信息并更新表单（参考原项目）
                 this.updateFormWithAddressInfo(addressComponent, lng, lat, address);
+                
+                // 更新表单验证状态，启用提交按钮
+                if (window.mainApp) {
+                    window.mainApp.validateForm();
+                }
 
             } else {
                 console.error('逆地理编码失败:', { status, result });
@@ -433,6 +438,11 @@ if (!navigator.geolocation) {
                 // 显示信息窗口（如果需要自动显示）
                 if (autoShowInfoWindow) {
                     this.showLocationInfo('未知位置', `坐标: ${coords}`, [lng, lat]);
+                }
+                
+                // 即使获取地址失败，也更新表单验证状态
+                if (window.mainApp) {
+                    window.mainApp.validateForm();
                 }
             }
         });

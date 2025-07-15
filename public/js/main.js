@@ -791,6 +791,10 @@ window.selectHistoryLocation = function(lng, lat, name) {
         window.mapManager.updateLocation(lng, lat);
         window.mapManager.map.setCenter([lng, lat]);
         window.mapManager.updateLocationInfo(name, lng, lat);
+        // 更新表单验证状态，启用提交按钮
+        if (window.mainApp) {
+            window.mainApp.validateForm();
+        }
     }
 };
 
@@ -799,6 +803,10 @@ window.selectFavoriteLocation = function(lng, lat, name) {
         window.mapManager.updateLocation(lng, lat);
         window.mapManager.map.setCenter([lng, lat]);
         window.mapManager.updateLocationInfo(name, lng, lat);
+        // 更新表单验证状态，启用提交按钮
+        if (window.mainApp) {
+            window.mainApp.validateForm();
+        }
     }
 };
 
