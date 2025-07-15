@@ -544,6 +544,40 @@ async function handleSubmitLocation(context, session) {
       );
     }
 
+    // 检查是否包含cxjg字段，如果有则可能需要确认
+    if (n8nResult.cxjg) {
+      try {
+        // 尝试解析cxjg字段（可能是JSON字符串）
+        let cxjgData;
+        if (typeof n8nResult.cxjg === 'string') {
+          cxjgData = JSON.parse(n8nResult.cxjg);
+        } else {
+          cxjgData = n8nResult.cxjg;
+        }
+        
+        // 如果包含msg字段，则返回需要确认的信息
+        if (cxjgData.msg) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              message: cxjgData.msg,
+              data: n8nResult,
+              needConfirm: true,
+              confirmData: cxjgData
+            }),
+            { 
+              status: 200, // 使用200状态码，但success为false
+              headers: {
+                "Content-Type": "application/json",
+              }
+            }
+          );
+        }
+      } catch (parseError) {
+        console.error("解析cxjg失败:", parseError);
+      }
+    }
+
     // 检查n8n返回的结果是否包含错误信息
     if (n8nResult.code && n8nResult.code !== 200) {
       // n8n返回了错误状态码
@@ -566,7 +600,7 @@ async function handleSubmitLocation(context, session) {
       JSON.stringify({
         success: true,
         message: "打卡成功",
-        data: n8nResult
+        result: n8nResult
       }),
       {
         status: 200,

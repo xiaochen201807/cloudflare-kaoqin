@@ -168,7 +168,7 @@ class MainApp {
             document.getElementById('loading-spinner').style.display = 'none';
 
             // 使用类中的showResultOverlay方法，而不是全局函数
-            this.showResultOverlay(result.data?result.data:result.message);
+            this.showResultOverlay(result);
 
         } catch (error) {
             console.error('提交位置数据失败:', error);
