@@ -93,6 +93,7 @@ const TEMPLATES = {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            font-size: 0.9em;
         }
         
         .logout-btn {
@@ -127,6 +128,15 @@ const TEMPLATES = {
             margin: 0;
             white-space: nowrap;
             font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* 添加与参考图一致的标题样式 */
+        .panel-header h1::before {
+            content: "📍";
+            margin-right: 8px;
+            font-size: 1.1em;
         }
         
         /* 优化面板高度，避免滚动条 */
@@ -192,6 +202,11 @@ const TEMPLATES = {
             font-size: 16px;
             pointer-events: none;
             line-height: 1; /* 确保图标不受行高影响 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
         }
         
         .search-container::before {
@@ -204,6 +219,11 @@ const TEMPLATES = {
             font-size: 16px;
             pointer-events: none;
             line-height: 1; /* 确保图标不受行高影响 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
         }
         
         /* 搜索按钮样式调整 */
@@ -354,6 +374,17 @@ const TEMPLATES = {
             padding: 10px 15px;
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
             z-index: 1000;
+            text-align: center;
+        }
+        
+        .mobile-action-bar .btn {
+            max-width: 400px;
+            margin: 0 auto;
+            height: 46px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         /* 移动端适配 */
@@ -432,10 +463,19 @@ const TEMPLATES = {
             .search-input, .name-input input {
                 height: 50px;
                 font-size: 16px;
-                padding: 12px 18px;
+                padding: 0 18px 0 42px; /* 增加左侧内边距，确保图标不重叠 */
                 border-radius: 12px;
                 margin-bottom: 20px;
                 box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            }
+            
+            /* 调整移动端图标大小和位置 */
+            .name-input::before,
+            .search-container::before {
+                font-size: 18px;
+                left: 14px;
+                width: 18px;
+                height: 18px;
             }
             
             .search-btn {
@@ -495,7 +535,7 @@ const TEMPLATES = {
         <div class="checkin-panel">
             <!-- 面板头部 -->
             <div class="panel-header">
-                <h1>📍 考勤打卡</h1>
+                <h1>考勤打卡</h1>
                 <div class="user-info">
                     <span class="user-name" id="userDisplayName">加载中...</span>
                     <button class="logout-btn" onclick="logout()" title="退出登录">退出</button>
