@@ -418,14 +418,64 @@ if (!navigator.geolocation) {
         
         console.log('保存编辑后的地址:', editedAddress);
         
-        // 更新表单数据中的地址
-        if (this.formData) {
-            this.formData['form-address'] = editedAddress;
-            this.formData['form-clock-address'] = editedAddress;
-        }
+        // 显示加载提示
+        this.showMessage('正在搜索地址位置...', 'info');
         
-        // 显示成功消息
-        this.showSuccess('地址已更新');
+        // 使用高德地图搜索服务查询地址对应的位置
+        if (this.placeSearch) {
+            this.placeSearch.search(editedAddress, (status, result) => {
+                if (status === 'complete' && result.poiList && result.poiList.pois.length > 0) {
+                    const poi = result.poiList.pois[0];
+                    const { lng, lat } = poi.location;
+                    
+                    console.log('地址搜索成功:', poi);
+                    
+                    // 更新地图位置
+                    this.updateLocation(lng, lat);
+                    this.map.setCenter([lng, lat]);
+                    
+                    // 更新表单数据
+                    if (this.formData) {
+                        this.formData['form-address'] = editedAddress;
+                        this.formData['form-clock-address'] = editedAddress;
+                        this.formData['form-lng'] = lng;
+                        this.formData['form-lat'] = lat;
+                        this.formData['form-clock-coordinates'] = `${lng},${lat}`;
+                    }
+                    
+                    // 显示成功消息
+                    this.showSuccess('地址已更新，位置已同步');
+                    
+                    // 添加到搜索历史
+                    this.addToSearchHistory({
+                        name: editedAddress,
+                        address: editedAddress,
+                        lng: lng,
+                        lat: lat,
+                        timestamp: Date.now()
+                    });
+                    
+                } else {
+                    console.warn('地址搜索无结果:', result);
+                    
+                    // 仅更新地址文本，保持原有坐标
+                    if (this.formData) {
+                        this.formData['form-address'] = editedAddress;
+                        this.formData['form-clock-address'] = editedAddress;
+                    }
+                    
+                    this.showMessage('无法找到该地址的精确位置，仅更新地址文本', 'warning');
+                }
+            });
+        } else {
+            // 如果搜索服务不可用，仅更新地址文本
+            if (this.formData) {
+                this.formData['form-address'] = editedAddress;
+                this.formData['form-clock-address'] = editedAddress;
+            }
+            
+            this.showSuccess('地址已更新');
+        }
     }
 
     /**
@@ -805,6 +855,16 @@ if (!navigator.geolocation) {
         console.log(message);
         if (window.showMessage) {
             window.showMessage(message, 'success');
+        }
+    }
+    
+    /**
+     * 显示通用消息
+     */
+    showMessage(message, type = 'info') {
+        console.log(`[${type}] ${message}`);
+        if (window.showMessage) {
+            window.showMessage(message, type);
         }
     }
 }
