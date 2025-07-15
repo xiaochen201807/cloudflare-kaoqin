@@ -314,6 +314,19 @@ const TEMPLATES = {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: pointer; /* 添加指针样式，提示可点击 */
+        }
+        
+        /* 折叠面板内容 */
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        
+        .collapsible-content.expanded {
+            max-height: 150px !important; /* 使用!important确保样式生效 */
+            overflow-y: auto;
         }
         
         .section-actions {
@@ -641,6 +654,35 @@ const TEMPLATES = {
         document.addEventListener('DOMContentLoaded', function() {
             // 检查是否为移动设备
             const isMobile = window.innerWidth <= 768;
+            
+            // 初始化折叠面板
+            const collapsibles = document.querySelectorAll('.collapsible-section');
+            collapsibles.forEach(section => {
+                const header = section.querySelector('.collapsible-header');
+                const content = section.querySelector('.collapsible-content');
+                
+                // 默认收起
+                if (content && !content.style.maxHeight) {
+                    content.style.maxHeight = '0px';
+                }
+            });
+            
+            // 添加全局折叠面板切换函数
+            window.toggleCollapsible = function(header) {
+                const section = header.parentElement;
+                const content = section.querySelector('.collapsible-content');
+                const toggleIcon = header.querySelector('.toggle-icon');
+                
+                if (content.style.maxHeight === '0px') {
+                    content.style.maxHeight = '150px';
+                    content.classList.add('expanded');
+                    toggleIcon.textContent = '▲';
+                } else {
+                    content.style.maxHeight = '0px';
+                    content.classList.remove('expanded');
+                    toggleIcon.textContent = '▼';
+                }
+            };
             
             if (isMobile) {
                 // 视图切换按钮
