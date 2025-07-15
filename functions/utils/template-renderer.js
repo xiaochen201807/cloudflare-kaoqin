@@ -153,11 +153,34 @@ const TEMPLATES = {
             padding: 15px;
         }
         
+        /* 搜索区域 */
         .search-section {
             padding: 15px;
             max-height: calc(100vh - 280px);
             overflow-y: auto;
             background: #f8f9fa;
+        }
+        
+        /* PC端输入框样式 */
+        .search-input, .name-input input {
+            width: 100%;
+            height: 44px;
+            padding: 0 46px 0 45px; /* 增加左侧内边距，避免文字与图标重叠 */
+            border: 2px solid transparent;
+            border-radius: 20px; /* 更圆润的边框 */
+            font-size: 15px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            background-image: linear-gradient(to right, #fff, #fff), 
+                              linear-gradient(to right, #667eea, #764ba2);
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+            position: relative;
+            z-index: 1;
+            line-height: 44px; /* 确保文本垂直居中 */
         }
         
         /* 添加输入框内的固定图标 */
@@ -178,8 +201,8 @@ const TEMPLATES = {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 16px;
-            height: 16px;
+            width: 20px;
+            height: 20px;
         }
         
         .search-container::before {
@@ -195,8 +218,8 @@ const TEMPLATES = {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 16px;
-            height: 16px;
+            width: 20px;
+            height: 20px;
         }
         
         /* 搜索按钮样式调整 */
@@ -451,8 +474,8 @@ const TEMPLATES = {
             .search-container::before {
                 font-size: 18px;
                 left: 14px;
-                width: 18px;
-                height: 18px;
+                width: 22px;
+                height: 22px;
             }
             
             .search-btn {
