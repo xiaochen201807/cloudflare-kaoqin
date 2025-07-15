@@ -153,7 +153,7 @@ const TEMPLATES = {
         /* 统一输入框样式 */
         .search-input, .name-input input {
             width: 100%;
-            padding: 12px 16px;
+            padding: 12px 16px 12px 40px; /* 左侧留出图标空间 */
             border: 2px solid transparent;
             border-radius: 10px;
             font-size: 15px;
@@ -168,6 +168,38 @@ const TEMPLATES = {
             background-clip: padding-box, border-box;
             position: relative;
             z-index: 1;
+        }
+        
+        /* 搜索输入框右侧留出按钮空间 */
+        .search-input {
+            padding-right: 50px;
+        }
+        
+        /* 添加输入框内的固定图标 */
+        .name-input, .search-container {
+            position: relative;
+        }
+        
+        .name-input::before {
+            content: "👤";
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 2;
+            font-size: 16px;
+            pointer-events: none;
+        }
+        
+        .search-container::before {
+            content: "📍";
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 2;
+            font-size: 16px;
+            pointer-events: none;
         }
         
         .search-input:focus, .name-input input:focus {
@@ -198,26 +230,14 @@ const TEMPLATES = {
         }
         
         .search-input::placeholder, .name-input input::placeholder {
-            color: #aaa;
+            color: #666;
             transition: opacity 0.3s, transform 0.3s;
+            font-weight: 400;
         }
         
         .search-input:focus::placeholder, .name-input input:focus::placeholder {
             opacity: 0.6;
             transform: translateX(5px);
-        }
-        
-        .name-input label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 500;
-            font-size: 14px;
-            transition: color 0.3s;
-        }
-        
-        .name-input:hover label {
-            color: #667eea;
         }
         
         /* 搜索容器优化 */
@@ -227,6 +247,7 @@ const TEMPLATES = {
             z-index: 1;
         }
         
+        /* 搜索按钮确保在最上层 */
         .search-btn {
             position: absolute;
             right: 8px;
@@ -244,6 +265,7 @@ const TEMPLATES = {
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 3;
         }
         
         .search-btn:hover {
@@ -498,8 +520,7 @@ const TEMPLATES = {
             <div class="search-section">
                 <!-- 1. 真实姓名输入框 (优先显示) -->
                 <div class="name-input">
-                    <label for="realName">真实姓名:</label>
-                    <input type="text" id="realName" name="realName" placeholder="请输入您的真实姓名" required>
+                    <input type="text" id="realName" name="realName" placeholder="输入您的真实姓名" required>
                 </div>
                 
                 <!-- 2. 搜索地点功能 -->
