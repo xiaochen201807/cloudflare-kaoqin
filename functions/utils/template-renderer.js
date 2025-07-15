@@ -227,7 +227,7 @@ const TEMPLATES = {
             position: absolute;
             right: 2px; /* 调整右侧距离 */
             top: 50%;
-            transform: translateY(-90%); /* 与图标使用相同的垂直偏移量 */
+            transform: translateY(-75%); /* 与图标使用相同的垂直偏移量 */
             background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
             color: white;
             border: none;
@@ -477,7 +477,7 @@ const TEMPLATES = {
                 left: 14px;
                 width: 22px;
                 height: 22px;
-                transform: translateY(-90%); /* 微调垂直位置 */
+                transform: translateY(-75%); /* 微调垂直位置 */
             }
             
             .search-btn {
@@ -488,7 +488,7 @@ const TEMPLATES = {
                 align-items: center;
                 justify-content: center;
                 line-height: 1;
-                transform: translateY(-90%); /* 与图标使用相同的垂直偏移量 */
+                transform: translateY(-75%); /* 与图标使用相同的垂直偏移量 */
                 top: 50%;
             }
             
