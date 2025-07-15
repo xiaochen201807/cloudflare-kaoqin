@@ -365,7 +365,12 @@ if (!navigator.geolocation) {
         // 启用提交按钮
         const submitBtn = document.getElementById('submitLocationBtn');
         if (submitBtn) {
-    submitBtn.disabled = false;
+            submitBtn.disabled = false;
+            
+            // 同步移动端按钮状态
+            if (window.mainApp) {
+                window.mainApp.syncMobileSubmitButton();
+            }
         }
     }
 
