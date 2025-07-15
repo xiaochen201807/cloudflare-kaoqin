@@ -382,12 +382,19 @@ if (!navigator.geolocation) {
         const addressInput = document.getElementById('locationAddress');
         const editBtn = document.getElementById('editAddressBtn');
         
-        if (!addressInput || !editBtn) return;
+        console.log('切换地址编辑模式 - 输入框:', addressInput ? '存在' : '不存在', '编辑按钮:', editBtn ? '存在' : '不存在');
+        
+        if (!addressInput || !editBtn) {
+            console.error('地址编辑元素不存在，无法切换编辑模式');
+            return;
+        }
         
         const isEditing = !addressInput.disabled;
+        console.log('当前编辑状态:', isEditing ? '编辑中' : '未编辑', '输入框禁用状态:', addressInput.disabled);
         
         if (isEditing) {
             // 当前是编辑模式，需要保存
+            console.log('保存地址编辑');
             this.saveEditedAddress();
             addressInput.disabled = true;
             editBtn.innerHTML = '✏️';
@@ -395,6 +402,7 @@ if (!navigator.geolocation) {
             editBtn.classList.remove('save-mode');
         } else {
             // 当前是查看模式，切换到编辑模式
+            console.log('进入地址编辑模式');
             addressInput.disabled = false;
             addressInput.focus();
             editBtn.innerHTML = '💾';

@@ -107,6 +107,82 @@ class MainApp {
         
         // 同步移动端底部提交按钮状态
         this.syncMobileSubmitButton();
+        
+        // 添加调试功能（开发环境）
+        if (window.location.hostname === 'localhost' || 
+            window.location.hostname.includes('127.0.0.1') ||
+            window.location.hostname.includes('192.168.') ||
+            window.location.hostname.includes('.local')) {
+            this.addMobileDebugTools();
+        }
+    }
+    
+    /**
+     * 添加移动端调试工具
+     */
+    addMobileDebugTools() {
+        console.log('添加移动端调试工具...');
+        
+        // 创建调试按钮
+        const debugBtn = document.createElement('button');
+        debugBtn.textContent = '调试';
+        debugBtn.style.position = 'fixed';
+        debugBtn.style.bottom = '140px';
+        debugBtn.style.right = '20px';
+        debugBtn.style.zIndex = '2000';
+        debugBtn.style.background = '#ff9800';
+        debugBtn.style.color = 'white';
+        debugBtn.style.border = 'none';
+        debugBtn.style.borderRadius = '50%';
+        debugBtn.style.width = '50px';
+        debugBtn.style.height = '50px';
+        debugBtn.style.fontSize = '14px';
+        debugBtn.style.cursor = 'pointer';
+        debugBtn.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+        
+        // 添加点击事件
+        debugBtn.addEventListener('click', () => {
+            // 检查地址编辑元素
+            const addressInput = document.getElementById('locationAddress');
+            const editBtn = document.getElementById('editAddressBtn');
+            const mainContainer = document.querySelector('.main-container');
+            const checkinPanel = document.querySelector('.checkin-panel');
+            
+            // 显示调试信息
+            const debugInfo = `
+地址输入框: ${addressInput ? '存在' : '不存在'}
+编辑按钮: ${editBtn ? '存在' : '不存在'}
+输入框禁用: ${addressInput ? addressInput.disabled : 'N/A'}
+视图模式: ${mainContainer.classList.contains('fullscreen-map') ? '全屏地图' : 
+           mainContainer.classList.contains('fullscreen-panel') ? '全屏面板' : '分屏'}
+面板显示: ${checkinPanel.style.display === 'none' ? '隐藏' : '显示'}
+移动端模式: ${this.isMobile ? '是' : '否'}
+屏幕宽度: ${window.innerWidth}px
+`;
+            
+            alert(debugInfo);
+            console.log('移动端调试信息:', debugInfo);
+            
+            // 如果地址编辑元素不存在，尝试修复
+            if (!addressInput || !editBtn) {
+                if (confirm('地址编辑元素缺失，是否尝试修复？')) {
+                    // 切换到面板视图
+                    mainContainer.classList.remove('fullscreen-map');
+                    mainContainer.classList.add('fullscreen-panel');
+                    
+                    // 确保面板显示
+                    checkinPanel.style.display = 'flex';
+                    
+                    // 刷新页面
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                }
+            }
+        });
+        
+        // 添加到文档
+        document.body.appendChild(debugBtn);
     }
     
     /**

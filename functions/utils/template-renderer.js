@@ -425,6 +425,7 @@ const TEMPLATES = {
             .search-section {
                 max-height: none; /* 移除最大高度限制 */
                 overflow-y: visible;
+                padding-bottom: 15px; /* 确保底部有足够空间 */
             }
             
             /* 在移动端隐藏面板内容区域的提交按钮 */
@@ -432,9 +433,31 @@ const TEMPLATES = {
                 display: none;
             }
             
-            /* 在移动端隐藏面板内容区域，因为已经移除提交按钮 */
+            /* 在移动端隐藏面板内容区域，但保留状态消息 */
             .panel-content {
-                display: none;
+                padding: 0;
+            }
+            
+            /* 确保地址编辑容器在移动端正常显示 */
+            .address-edit-container {
+                display: flex;
+                margin-bottom: 10px;
+                width: 100%;
+            }
+            
+            /* 确保地址输入框在移动端有足够大小 */
+            .address-input {
+                flex: 1;
+                font-size: 16px; /* 移动端更大字体 */
+                padding: 10px;
+                height: 44px;
+            }
+            
+            /* 编辑按钮在移动端更大 */
+            .edit-btn {
+                width: 44px;
+                height: 44px;
+                margin-left: 8px;
             }
             
             /* 显示移动端特有元素 */
@@ -459,6 +482,7 @@ const TEMPLATES = {
             .fullscreen-panel .checkin-panel {
                 height: 100vh;
                 z-index: 900;
+                overflow-y: auto; /* 确保在全屏模式下内容可滚动 */
             }
             
             .fullscreen-panel .map-container {
