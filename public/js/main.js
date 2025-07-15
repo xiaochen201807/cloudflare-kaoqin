@@ -113,6 +113,7 @@ class MainApp {
      * 提交位置数据
      */
     async submitLocation() {
+        console.log('提交位置数据...');
         if (this.isSubmitting) {
             return;
         }
@@ -166,7 +167,7 @@ class MainApp {
             // 隐藏加载动画
             document.getElementById('loading-spinner').style.display = 'none';
 
-            // 显示结果罩层
+            // 使用类中的showResultOverlay方法，而不是全局函数
             this.showResultOverlay(result);
 
         } catch (error) {
@@ -176,7 +177,7 @@ class MainApp {
             // 隐藏加载动画
             document.getElementById('loading-spinner').style.display = 'none';
             
-            // 显示错误结果
+            // 使用类中的showResultOverlay方法，而不是全局函数
             this.showResultOverlay({
                 success: false,
                 message: '提交失败',
@@ -687,6 +688,9 @@ window.showMessage = function(message, type) {
 window.showResultOverlay = function(data) {
     if (window.mainApp) {
         window.mainApp.showResultOverlay(data);
+    } else {
+        console.error('mainApp实例不存在，无法显示结果');
+        alert('系统错误：无法显示结果，请刷新页面重试');
     }
 };
 
