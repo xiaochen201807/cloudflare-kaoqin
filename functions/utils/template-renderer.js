@@ -193,7 +193,7 @@ const TEMPLATES = {
             position: absolute;
             left: 15px;
             top: 50%;
-            transform: translateY(-55%); /* 微调垂直位置 */
+            transform: translateY(-90%); /* 微调垂直位置 */
             z-index: 2;
             font-size: 16px;
             pointer-events: none;
@@ -210,7 +210,7 @@ const TEMPLATES = {
             position: absolute;
             left: 15px;
             top: 50%;
-            transform: translateY(-55%); /* 微调垂直位置 */
+            transform: translateY(-90%); /* 微调垂直位置 */
             z-index: 2;
             font-size: 16px;
             pointer-events: none;
@@ -477,7 +477,7 @@ const TEMPLATES = {
                 left: 14px;
                 width: 22px;
                 height: 22px;
-                transform: translateY(-55%); /* 微调垂直位置 */
+                transform: translateY(-90%); /* 微调垂直位置 */
             }
             
             .search-btn {
