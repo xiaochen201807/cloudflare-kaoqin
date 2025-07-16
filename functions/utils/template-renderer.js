@@ -33,6 +33,8 @@ const TEMPLATES = {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录 - 考勤系统</title>
     <link rel="stylesheet" href="/css/login.css">
+    <!-- 添加favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><path d='M24 4C16.268 4 10 10.268 10 18C10 28.5 24 44 24 44C24 44 38 28.5 38 18C38 10.268 31.732 4 24 4Z' fill='%234285F4'/><circle cx='24' cy='18' r='6' fill='white'/></svg>" type="image/svg+xml">
 </head>
 <body>
     <!-- 动态背景 -->
@@ -75,6 +77,8 @@ const TEMPLATES = {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>考勤打卡系统</title>
+    <!-- 添加favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><path d='M24 4C16.268 4 10 10.268 10 18C10 28.5 24 44 24 44C24 44 38 28.5 38 18C38 10.268 31.732 4 24 4Z' fill='%234285F4'/><circle cx='24' cy='18' r='6' fill='white'/></svg>" type="image/svg+xml">
     <!-- 高德地图安全配置 -->
     <script type="text/javascript">
         window._AMapSecurityConfig = {

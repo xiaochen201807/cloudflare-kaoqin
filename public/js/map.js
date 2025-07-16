@@ -15,6 +15,7 @@ class MapManager {
         this.searchHistory = this.loadSearchHistory();
         this.favoriteLocations = this.loadFavoriteLocations();
         this.formData = null; // 添加formData属性用于存储表单数据
+        this.hasUserSelectedLocation = false; // 添加标志位，标记用户是否已选择位置
         
         this.init();
     }
@@ -123,6 +124,11 @@ class MapManager {
             return;
         }
 
+        // 如果用户已经选择了位置，不再使用自动定位覆盖
+        if (this.hasUserSelectedLocation) {
+            console.log('用户已选择位置，跳过自动定位');
+            return;
+        }
 
         console.log('开始获取当前位置...');
 
@@ -294,6 +300,10 @@ if (!navigator.geolocation) {
                     timestamp: Date.now()
                 });
                 
+                // 设置用户已选择位置标志
+                this.hasUserSelectedLocation = true;
+                console.log('用户通过搜索选择了位置，已设置标志位');
+                
             } else {
                 console.error('搜索失败:', result);
                 this.showError('搜索失败，请尝试其他关键词');
@@ -450,6 +460,10 @@ if (!navigator.geolocation) {
                         this.formData['form-lat'] = lat;
                         this.formData['form-clock-coordinates'] = `${lng},${lat}`;
                     }
+                    
+                    // 设置用户已选择位置标志
+                    this.hasUserSelectedLocation = true;
+                    console.log('用户通过编辑地址选择了位置，已设置标志位');
                     
                     // 显示成功消息
                     this.showSuccess('地址已更新，位置已同步');
@@ -874,6 +888,24 @@ if (!navigator.geolocation) {
         if (window.showMessage) {
             window.showMessage(message, type);
         }
+    }
+
+    /**
+     * 重置位置选择标志
+     */
+    resetLocationFlag() {
+        this.hasUserSelectedLocation = false;
+        console.log('已重置位置选择标志，允许自动定位');
+    }
+    
+    /**
+     * 刷新当前位置（强制获取当前位置）
+     */
+    refreshCurrentLocation() {
+        // 重置位置选择标志
+        this.resetLocationFlag();
+        // 获取当前位置
+        this.getCurrentLocation();
     }
 }
 

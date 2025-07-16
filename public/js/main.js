@@ -270,19 +270,6 @@ class MainApp {
     }
 
     /**
-     * 刷新位置
-     */
-    refreshLocation() {
-        console.log('刷新位置...');
-        
-        if (window.getCurrentCoordinates) {
-            window.getCurrentCoordinates();
-        }
-        
-        this.showMessage('正在获取位置信息...', 'info');
-    }
-
-    /**
      * 提交位置数据
      */
     async submitLocation() {
@@ -829,8 +816,13 @@ window.mainApp = null;
 
 // 全局函数
 window.refreshLocation = function() {
+    if (window.mapManager) {
+        // 使用新的方法，强制刷新当前位置
+        window.mapManager.refreshCurrentLocation();
+    }
+    
     if (window.mainApp) {
-        window.mainApp.refreshLocation();
+        window.mainApp.showMessage('正在获取位置信息...', 'info');
     }
 };
 
@@ -867,6 +859,9 @@ window.selectHistoryLocation = function(lng, lat, name) {
         window.mapManager.updateLocation(lng, lat);
         window.mapManager.map.setCenter([lng, lat]);
         window.mapManager.updateLocationInfo(name, lng, lat);
+        // 设置用户已选择位置标志
+        window.mapManager.hasUserSelectedLocation = true;
+        console.log('用户从历史记录选择了位置，已设置标志位');
         // 更新表单验证状态，启用提交按钮
         if (window.mainApp) {
             window.mainApp.validateForm();
@@ -879,6 +874,9 @@ window.selectFavoriteLocation = function(lng, lat, name) {
         window.mapManager.updateLocation(lng, lat);
         window.mapManager.map.setCenter([lng, lat]);
         window.mapManager.updateLocationInfo(name, lng, lat);
+        // 设置用户已选择位置标志
+        window.mapManager.hasUserSelectedLocation = true;
+        console.log('用户从收藏选择了位置，已设置标志位');
         // 更新表单验证状态，启用提交按钮
         if (window.mainApp) {
             window.mainApp.validateForm();
