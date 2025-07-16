@@ -817,12 +817,12 @@ window.mainApp = null;
 // 全局函数
 window.refreshLocation = function() {
     if (window.mapManager) {
-        // 使用新的方法，强制刷新当前位置
+        // 使用新的方法，不再自动定位
         window.mapManager.refreshCurrentLocation();
     }
     
     if (window.mainApp) {
-        window.mainApp.showMessage('正在获取位置信息...', 'info');
+        window.mainApp.showMessage('请选择打卡位置', 'info');
     }
 };
 

@@ -53,9 +53,11 @@ class MapManager {
             // 添加地图事件监听
             this.addMapEvents();
             
-
-            // 尝试获取当前位置
-            this.getCurrentLocation();
+            // 不再自动获取当前位置，等待用户选择
+            // this.getCurrentLocation();
+            
+            // 显示提示信息，引导用户选择位置
+            this.showMessage('请通过搜索、点击地图或拖动标记选择打卡位置', 'info');
             
             console.log('高德地图初始化完成');
             
@@ -326,7 +328,7 @@ if (!navigator.geolocation) {
         // 创建新标记，支持拖拽
         this.marker = new AMap.Marker({
             position: [lng, lat],
-            title: '当前位置',
+            title: '打卡位置',
             draggable: true, // 启用拖拽
             cursor: 'move'
         });
@@ -340,8 +342,27 @@ if (!navigator.geolocation) {
             this.currentLocation = { lng: newLng, lat: newLat };
             this.updateCoordinatesDisplay(newLng, newLat);
 
+            // 更新表单数据
+            if (this.formData) {
+                this.formData['form-lng'] = newLng;
+                this.formData['form-lat'] = newLat;
+                this.formData['form-clock-coordinates'] = `${newLng},${newLat}`;
+                
+                // 更新表单元素
+                const lngInput = document.getElementById('form-lng');
+                const latInput = document.getElementById('form-lat');
+                const coordsInput = document.getElementById('form-clock-coordinates');
+                
+                if (lngInput) lngInput.value = newLng;
+                if (latInput) latInput.value = newLat;
+                if (coordsInput) coordsInput.value = `${newLng},${newLat}`;
+            }
+
             // 获取新位置的地址信息
             this.getAddressByCoords([newLng, newLat]);
+            
+            // 设置用户已选择位置标志
+            this.hasUserSelectedLocation = true;
         });
 
 
@@ -351,8 +372,26 @@ if (!navigator.geolocation) {
         this.currentLocation = { lng, lat };
 
         // 更新坐标显示
-
         this.updateCoordinatesDisplay(lng, lat);
+        
+        // 更新表单数据
+        if (this.formData) {
+            this.formData['form-lng'] = lng;
+            this.formData['form-lat'] = lat;
+            this.formData['form-clock-coordinates'] = `${lng},${lat}`;
+            
+            // 更新表单元素
+            const lngInput = document.getElementById('form-lng');
+            const latInput = document.getElementById('form-lat');
+            const coordsInput = document.getElementById('form-clock-coordinates');
+            
+            if (lngInput) lngInput.value = lng;
+            if (latInput) latInput.value = lat;
+            if (coordsInput) coordsInput.value = `${lng},${lat}`;
+        }
+        
+        // 设置用户已选择位置标志
+        this.hasUserSelectedLocation = true;
     }
 
     /**
@@ -456,10 +495,31 @@ if (!navigator.geolocation) {
                     if (this.formData) {
                         this.formData['form-address'] = editedAddress;
                         this.formData['form-clock-address'] = editedAddress;
+                        
+                        // 确保坐标也被更新
                         this.formData['form-lng'] = lng;
                         this.formData['form-lat'] = lat;
                         this.formData['form-clock-coordinates'] = `${lng},${lat}`;
+                        
+                        // 更新表单元素
+                        const addressElem = document.getElementById('form-address');
+                        const clockAddressElem = document.getElementById('form-clock-address');
+                        const lngInput = document.getElementById('form-lng');
+                        const latInput = document.getElementById('form-lat');
+                        const coordsInput = document.getElementById('form-clock-coordinates');
+                        
+                        if (addressElem) addressElem.value = editedAddress;
+                        if (clockAddressElem) clockAddressElem.value = editedAddress;
+                        if (lngInput) lngInput.value = lng;
+                        if (latInput) latInput.value = lat;
+                        if (coordsInput) coordsInput.value = `${lng},${lat}`;
                     }
+                    
+                    // 更新当前位置
+                    this.currentLocation = { lng, lat };
+                    
+                    // 更新坐标显示
+                    this.updateCoordinatesDisplay(lng, lat);
                     
                     // 设置用户已选择位置标志
                     this.hasUserSelectedLocation = true;
@@ -484,6 +544,13 @@ if (!navigator.geolocation) {
                     if (this.formData) {
                         this.formData['form-address'] = editedAddress;
                         this.formData['form-clock-address'] = editedAddress;
+                        
+                        // 更新表单元素
+                        const addressElem = document.getElementById('form-address');
+                        const clockAddressElem = document.getElementById('form-clock-address');
+                        
+                        if (addressElem) addressElem.value = editedAddress;
+                        if (clockAddressElem) clockAddressElem.value = editedAddress;
                     }
                     
                     this.showMessage('无法找到该地址的精确位置，仅更新地址文本', 'warning');
@@ -494,6 +561,13 @@ if (!navigator.geolocation) {
             if (this.formData) {
                 this.formData['form-address'] = editedAddress;
                 this.formData['form-clock-address'] = editedAddress;
+                
+                // 更新表单元素
+                const addressElem = document.getElementById('form-address');
+                const clockAddressElem = document.getElementById('form-clock-address');
+                
+                if (addressElem) addressElem.value = editedAddress;
+                if (clockAddressElem) clockAddressElem.value = editedAddress;
             }
             
             this.showSuccess('地址已更新');
@@ -676,11 +750,21 @@ if (!navigator.geolocation) {
         if (currentCoords) {
             currentCoords.innerHTML = `
                 <div style="font-family: monospace; font-size: 0.9em;">
+                    <div>打卡位置坐标:</div>
                     <div>经度: ${lng.toFixed(6)}</div>
                     <div>纬度: ${lat.toFixed(6)}</div>
                 </div>
             `;
         }
+        
+        // 同步更新表单元素的值
+        const lngInput = document.getElementById('form-lng');
+        const latInput = document.getElementById('form-lat');
+        const coordsInput = document.getElementById('form-clock-coordinates');
+        
+        if (lngInput) lngInput.value = lng;
+        if (latInput) latInput.value = lat;
+        if (coordsInput) coordsInput.value = `${lng},${lat}`;
     }
 
 
@@ -899,13 +983,16 @@ if (!navigator.geolocation) {
     }
     
     /**
-     * 刷新当前位置（强制获取当前位置）
+     * 刷新当前位置（现在只是显示提示，不再自动定位）
      */
     refreshCurrentLocation() {
-        // 重置位置选择标志
-        this.resetLocationFlag();
-        // 获取当前位置
-        this.getCurrentLocation();
+        // 显示提示信息，引导用户选择位置
+        this.showMessage('请通过搜索、点击地图或拖动标记选择打卡位置', 'info');
+        
+        // 如果用户已经选择了位置，提示用户可以继续使用当前位置
+        if (this.currentLocation) {
+            this.showMessage('您可以继续使用当前选择的位置，或选择新的位置', 'info');
+        }
     }
 }
 
