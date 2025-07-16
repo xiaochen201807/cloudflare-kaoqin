@@ -520,7 +520,7 @@ if (!navigator.geolocation) {
      */
     saveEditedAddress() {
         const addressInput = document.getElementById('locationAddress');
-        if (!addressInput || !this.currentLocation) return;
+        if (!addressInput) return;
         
         const editedAddress = addressInput.value.trim();
         if (!editedAddress) {
@@ -533,100 +533,54 @@ if (!navigator.geolocation) {
         // 显示加载提示
         this.showMessage('正在搜索地址位置...', 'info');
         
-        // 使用高德地图搜索服务查询地址对应的位置
-        if (this.placeSearch) {
-            this.placeSearch.search(editedAddress, (status, result) => {
-                if (status === 'complete' && result.poiList && result.poiList.pois.length > 0) {
-                    const poi = result.poiList.pois[0];
-                    const { lng, lat } = poi.location;
+        // 直接使用searchLocation方法的逻辑
+        this.placeSearch.search(editedAddress, (status, result) => {
+            if (status === 'complete' && result.poiList && result.poiList.pois.length > 0) {
+                const poi = result.poiList.pois[0];
+                const { lng, lat } = poi.location;
+                
+                console.log('地址搜索成功:', poi);
+                
+                // 更新地图位置
+                this.updateLocation(lng, lat);
+                this.map.setCenter([lng, lat]);
+                
+                // 获取详细地址信息
+                this.getAddressByCoords([lng, lat], true);
+                
+                // 添加到搜索历史
+                this.addToSearchHistory({
+                    name: poi.name || editedAddress,
+                    address: poi.address || poi.name || editedAddress,
+                    lng: lng,
+                    lat: lat,
+                    timestamp: Date.now()
+                });
+                
+                // 设置用户已选择位置标志
+                this.hasUserSelectedLocation = true;
+                console.log('用户通过编辑地址选择了位置，已设置标志位');
+                
+                // 显示成功消息
+                this.showSuccess('地址已更新，位置已同步');
+            } else {
+                console.warn('地址搜索无结果:', result);
+                this.showMessage('无法找到该地址的精确位置，请尝试其他关键词', 'warning');
+                
+                // 如果搜索失败，至少更新地址文本
+                if (this.formData) {
+                    this.formData['form-address'] = editedAddress;
+                    this.formData['form-clock-address'] = editedAddress;
                     
-                    console.log('地址搜索成功:', poi);
+                    // 更新表单元素
+                    const addressElem = document.getElementById('form-address');
+                    const clockAddressElem = document.getElementById('form-clock-address');
                     
-                    // 更新地图位置
-                    this.updateLocation(lng, lat);
-                    this.map.setCenter([lng, lat]);
-                    
-                    // 更新表单数据
-                    if (this.formData) {
-                        this.formData['form-address'] = editedAddress;
-                        this.formData['form-clock-address'] = editedAddress;
-                        
-                        // 确保坐标也被更新
-                        this.formData['form-lng'] = lng;
-                        this.formData['form-lat'] = lat;
-                        this.formData['form-clock-coordinates'] = `${lng},${lat}`;
-                        
-                        // 更新表单元素
-                        const addressElem = document.getElementById('form-address');
-                        const clockAddressElem = document.getElementById('form-clock-address');
-                        const lngInput = document.getElementById('form-lng');
-                        const latInput = document.getElementById('form-lat');
-                        const coordsInput = document.getElementById('form-clock-coordinates');
-                        
-                        if (addressElem) addressElem.value = editedAddress;
-                        if (clockAddressElem) clockAddressElem.value = editedAddress;
-                        if (lngInput) lngInput.value = lng;
-                        if (latInput) latInput.value = lat;
-                        if (coordsInput) coordsInput.value = `${lng},${lat}`;
-                    }
-                    
-                    // 更新当前位置
-                    this.currentLocation = { lng, lat };
-                    
-                    // 更新坐标显示
-                    this.updateCoordinatesDisplay(lng, lat);
-                    
-                    // 设置用户已选择位置标志
-                    this.hasUserSelectedLocation = true;
-                    console.log('用户通过编辑地址选择了位置，已设置标志位');
-                    
-                    // 显示成功消息
-                    this.showSuccess('地址已更新，位置已同步');
-                    
-                    // 添加到搜索历史
-                    this.addToSearchHistory({
-                        name: editedAddress,
-                        address: editedAddress,
-                        lng: lng,
-                        lat: lat,
-                        timestamp: Date.now()
-                    });
-                    
-                } else {
-                    console.warn('地址搜索无结果:', result);
-                    
-                    // 仅更新地址文本，保持原有坐标
-                    if (this.formData) {
-                        this.formData['form-address'] = editedAddress;
-                        this.formData['form-clock-address'] = editedAddress;
-                        
-                        // 更新表单元素
-                        const addressElem = document.getElementById('form-address');
-                        const clockAddressElem = document.getElementById('form-clock-address');
-                        
-                        if (addressElem) addressElem.value = editedAddress;
-                        if (clockAddressElem) clockAddressElem.value = editedAddress;
-                    }
-                    
-                    this.showMessage('无法找到该地址的精确位置，仅更新地址文本', 'warning');
+                    if (addressElem) addressElem.value = editedAddress;
+                    if (clockAddressElem) clockAddressElem.value = editedAddress;
                 }
-            });
-        } else {
-            // 如果搜索服务不可用，仅更新地址文本
-            if (this.formData) {
-                this.formData['form-address'] = editedAddress;
-                this.formData['form-clock-address'] = editedAddress;
-                
-                // 更新表单元素
-                const addressElem = document.getElementById('form-address');
-                const clockAddressElem = document.getElementById('form-clock-address');
-                
-                if (addressElem) addressElem.value = editedAddress;
-                if (clockAddressElem) clockAddressElem.value = editedAddress;
             }
-            
-            this.showSuccess('地址已更新');
-        }
+        });
     }
 
     /**
@@ -650,6 +604,13 @@ if (!navigator.geolocation) {
         } else {
             lngLatPosition = position;
         }
+        
+        // 获取坐标值
+        const lng = lngLatPosition.getLng ? lngLatPosition.getLng() : lngLatPosition.lng;
+        const lat = lngLatPosition.getLat ? lngLatPosition.getLat() : lngLatPosition.lat;
+        
+        // 立即更新坐标显示，不等待地理编码结果
+        this.updateCoordinatesDisplay(lng, lat);
 
         this.geocoder.getAddress(lngLatPosition, (status, result) => {
             console.log('逆地理编码状态:', status, '结果:', result);
@@ -667,10 +628,6 @@ if (!navigator.geolocation) {
                            '未知位置';
 
                 console.log('获取地址成功:', { name, address, addressComponent });
-
-                // 获取坐标值
-                const lng = lngLatPosition.getLng ? lngLatPosition.getLng() : lngLatPosition.lng;
-                const lat = lngLatPosition.getLat ? lngLatPosition.getLat() : lngLatPosition.lat;
 
                 // 更新位置信息显示
                 this.updateLocationInfo(address, lng, lat);
@@ -690,8 +647,6 @@ if (!navigator.geolocation) {
 
             } else {
                 console.error('逆地理编码失败:', { status, result });
-                const lng = lngLatPosition.getLng ? lngLatPosition.getLng() : lngLatPosition.lng;
-                const lat = lngLatPosition.getLat ? lngLatPosition.getLat() : lngLatPosition.lat;
                 const coords = `${lng.toFixed(6)}, ${lat.toFixed(6)}`;
                 this.updateLocationInfo(`坐标位置 (${coords})`, lng, lat);
                 
