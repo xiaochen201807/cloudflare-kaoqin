@@ -111,8 +111,18 @@ class MapManager {
             const { lng, lat } = e.lnglat;
 
             console.log('地图点击位置:', { lng, lat });
+            
+            // 更新当前位置
+            this.currentLocation = { lng, lat };
+            
+            // 更新地图标记
             this.updateLocation(lng, lat);
-            this.getAddressByCoords([lng, lat], true); // 修改为自动显示信息窗口
+            
+            // 获取地址信息并显示信息窗口
+            this.getAddressByCoords([lng, lat], true);
+            
+            // 设置用户已选择位置标志
+            this.hasUserSelectedLocation = true;
         });
     }
 
@@ -410,7 +420,31 @@ if (!navigator.geolocation) {
         if (locationCoords) {
             locationCoords.textContent = `坐标: ${lng.toFixed(6)}, ${lat.toFixed(6)}`;
         }
-           
+        
+        // 更新坐标显示
+        this.updateCoordinatesDisplay(lng, lat);
+        
+        // 更新表单数据
+        if (this.formData) {
+            this.formData['form-address'] = address;
+            this.formData['form-clock-address'] = address;
+            this.formData['form-lng'] = lng;
+            this.formData['form-lat'] = lat;
+            this.formData['form-clock-coordinates'] = `${lng},${lat}`;
+            
+            // 更新表单元素
+            const addressElem = document.getElementById('form-address');
+            const clockAddressElem = document.getElementById('form-clock-address');
+            const lngInput = document.getElementById('form-lng');
+            const latInput = document.getElementById('form-lat');
+            const coordsInput = document.getElementById('form-clock-coordinates');
+            
+            if (addressElem) addressElem.value = address;
+            if (clockAddressElem) clockAddressElem.value = address;
+            if (lngInput) lngInput.value = lng;
+            if (latInput) latInput.value = lat;
+            if (coordsInput) coordsInput.value = `${lng},${lat}`;
+        }
         
         // 启用提交按钮
         const submitBtn = document.getElementById('submitLocationBtn');
@@ -449,6 +483,9 @@ if (!navigator.geolocation) {
             editBtn.innerHTML = '✏️';
             editBtn.title = '编辑地址';
             editBtn.classList.remove('save-mode');
+            
+            // 移除输入事件监听器
+            addressInput.removeEventListener('input', this._addressInputHandler);
         } else {
             // 当前是查看模式，切换到编辑模式
             console.log('进入地址编辑模式');
@@ -457,6 +494,24 @@ if (!navigator.geolocation) {
             editBtn.innerHTML = '💾';
             editBtn.title = '保存地址';
             editBtn.classList.add('save-mode');
+            
+            // 添加输入事件监听器，实时更新坐标显示
+            this._addressInputHandler = () => {
+                // 在用户输入时不立即搜索，但可以更新表单状态
+                if (this.formData) {
+                    this.formData['form-address'] = addressInput.value;
+                    this.formData['form-clock-address'] = addressInput.value;
+                    
+                    // 更新表单元素
+                    const addressElem = document.getElementById('form-address');
+                    const clockAddressElem = document.getElementById('form-clock-address');
+                    
+                    if (addressElem) addressElem.value = addressInput.value;
+                    if (clockAddressElem) clockAddressElem.value = addressInput.value;
+                }
+            };
+            
+            addressInput.addEventListener('input', this._addressInputHandler);
         }
     }
     
@@ -837,7 +892,7 @@ if (!navigator.geolocation) {
         }
         
         const locationAddress = document.getElementById('locationAddress');
-        const address = locationAddress ? locationAddress.textContent : '未知位置';
+        const address = locationAddress ? locationAddress.value : '未知位置';
         
         this.addToFavorites({
             name: address,
