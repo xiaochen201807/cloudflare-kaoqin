@@ -642,19 +642,31 @@ const TEMPLATES = {
                 
                 <!-- 5. 当前位置信息 -->
                 <div class="location-info" id="locationInfo">
-                    <h4>📍 当前位置</h4>
+                    <h4>📍 打卡位置</h4>
                     <!-- 将静态文本改为可编辑的输入框，默认禁用 -->
                     <div class="address-edit-container">
-                        <input type="text" id="locationAddress" class="address-input" disabled placeholder="正在获取位置信息...">
+                        <input type="text" id="locationAddress" class="address-input" disabled placeholder="请选择打卡位置...">
                         <button class="action-btn edit-btn" id="editAddressBtn" onclick="toggleAddressEdit()" title="编辑地址">
                             ✏️
                         </button>
                     </div>
                     <p class="coordinates" id="locationCoords">坐标: --</p>
                     <div class="location-actions">
-                        <button class="action-btn favorite-btn" id="favoriteCurrentBtn" onclick="favoriteCurrentLocation()" title="收藏当前位置">
+                        <button class="action-btn favorite-btn" id="favoriteCurrentBtn" onclick="favoriteCurrentLocation()" title="收藏打卡位置">
                             ⭐ 收藏
                         </button>
+                    </div>
+                    <!-- 添加隐藏表单字段用于存储坐标和地址信息 -->
+                    <div style="display: none;">
+                        <input type="hidden" id="form-lng" name="form-lng" value="">
+                        <input type="hidden" id="form-lat" name="form-lat" value="">
+                        <input type="hidden" id="form-address" name="form-address" value="">
+                        <input type="hidden" id="form-clock-coordinates" name="form-clock-coordinates" value="">
+                        <input type="hidden" id="form-clock-address" name="form-clock-address" value="">
+                        <input type="hidden" id="form-province-code" name="form-province-code" value="">
+                        <input type="hidden" id="form-province-short" name="form-province-short" value="">
+                        <input type="hidden" id="form-city-code" name="form-city-code" value="">
+                        <input type="hidden" id="form-city-name" name="form-city-name" value="">
                     </div>
                 </div>
 
