@@ -856,59 +856,27 @@ window.clearFavorites = function() {
 
 window.selectHistoryLocation = function(lng, lat, name) {
     if (window.mapManager) {
-        // 直接调用逆地理编码，确保获取完整地址信息
-        window.mapManager.getAddressByCoords(lng, lat, (status, result) => {
-            if (status === 'complete' && result.info === 'OK') {
-                // 使用API返回的详细地址更新UI
-                window.mapManager.updateLocationInfo(
-                    result.regeocode.formattedAddress, 
-                    lng, 
-                    lat, 
-                    result.regeocode.addressComponent
-                );
-            } else {
-                // 如果逆地理编码失败，回退到基本信息
-                window.mapManager.updateLocationInfo(name, lng, lat);
-            }
-            // 移动地图中心
-            window.mapManager.map.setCenter([lng, lat]);
-            // 设置用户已选择位置标志
-            window.mapManager.hasUserSelectedLocation = true;
-            console.log('用户从历史记录选择了位置，已设置标志位');
-            // 更新表单验证状态，启用提交按钮
-            if (window.mainApp) {
-                window.mainApp.validateForm();
-            }
-        });
+        // 修复：将 lng 和 lat 包装在数组中传递
+        window.mapManager.getAddressByCoords([lng, lat], true, name);
+        window.mapManager.map.setCenter([lng, lat]);
+        window.mapManager.hasUserSelectedLocation = true;
+        console.log('用户从历史记录选择了位置，已设置标志位');
+        if (window.mainApp) {
+            window.mainApp.validateForm();
+        }
     }
 };
 
 window.selectFavoriteLocation = function(lng, lat, name) {
     if (window.mapManager) {
-        // 直接调用逆地理编码，确保获取完整地址信息
-        window.mapManager.getAddressByCoords(lng, lat, (status, result) => {
-            if (status === 'complete' && result.info === 'OK') {
-                // 使用API返回的详细地址更新UI
-                window.mapManager.updateLocationInfo(
-                    result.regeocode.formattedAddress, 
-                    lng, 
-                    lat, 
-                    result.regeocode.addressComponent
-                );
-            } else {
-                // 如果逆地理编码失败，回退到基本信息
-                window.mapManager.updateLocationInfo(name, lng, lat);
-            }
-            // 移动地图中心
-            window.mapManager.map.setCenter([lng, lat]);
-            // 设置用户已选择位置标志
-            window.mapManager.hasUserSelectedLocation = true;
-            console.log('用户从收藏选择了位置，已设置标志位');
-            // 更新表单验证状态，启用提交按钮
-            if (window.mainApp) {
-                window.mainApp.validateForm();
-            }
-        });
+        // 修复：将 lng 和 lat 包装在数组中传递
+        window.mapManager.getAddressByCoords([lng, lat], true, name);
+        window.mapManager.map.setCenter([lng, lat]);
+        window.mapManager.hasUserSelectedLocation = true;
+        console.log('用户从收藏选择了位置，已设置标志位');
+        if (window.mainApp) {
+            window.mainApp.validateForm();
+        }
     }
 };
 

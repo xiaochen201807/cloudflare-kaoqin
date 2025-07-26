@@ -586,12 +586,12 @@ if (!navigator.geolocation) {
     /**
      * 根据坐标获取地址信息（按照原项目实现）
      */
-    getAddressByCoords(position, autoShowInfoWindow = false) {
+    getAddressByCoords(position, autoShowInfoWindow = false, fallbackName = '未知位置') {
         console.log('开始根据坐标获取地址:', position);
 
         if (!this.geocoder) {
             console.error('地理编码器未初始化');
-            this.showLocationInfo('未知位置', '地理编码器未初始化', position);
+            this.showLocationInfo(fallbackName, '地理编码器未初始化', position);
             return;
         }
 
@@ -625,7 +625,7 @@ if (!navigator.geolocation) {
                            addressComponent.district ||
                            addressComponent.city ||
                            addressComponent.province ||
-                           '未知位置';
+                           fallbackName;
 
                 console.log('获取地址成功:', { name, address, addressComponent });
 
@@ -648,11 +648,11 @@ if (!navigator.geolocation) {
             } else {
                 console.error('逆地理编码失败:', { status, result });
                 const coords = `${lng.toFixed(6)}, ${lat.toFixed(6)}`;
-                this.updateLocationInfo(`坐标位置 (${coords})`, lng, lat);
+                this.updateLocationInfo(`${fallbackName} (${coords})`, lng, lat);
                 
                 // 显示信息窗口（如果需要自动显示）
                 if (autoShowInfoWindow) {
-                    this.showLocationInfo('未知位置', `坐标: ${coords}`, [lng, lat]);
+                    this.showLocationInfo(fallbackName, `坐标: ${coords}`, [lng, lat]);
                 }
                 
                 // 即使获取地址失败，也更新表单验证状态
