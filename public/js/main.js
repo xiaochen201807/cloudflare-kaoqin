@@ -856,7 +856,8 @@ window.clearFavorites = function() {
 
 window.selectHistoryLocation = function(lng, lat, name) {
     if (window.mapManager) {
-        // 修复：将 lng 和 lat 包装在数组中传递
+        // 修复：在调用 getAddressByCoords 之前，先调用 updateLocation
+        window.mapManager.updateLocation(lng, lat);
         window.mapManager.getAddressByCoords([lng, lat], true, name);
         window.mapManager.map.setCenter([lng, lat]);
         window.mapManager.hasUserSelectedLocation = true;
@@ -869,7 +870,8 @@ window.selectHistoryLocation = function(lng, lat, name) {
 
 window.selectFavoriteLocation = function(lng, lat, name) {
     if (window.mapManager) {
-        // 修复：将 lng 和 lat 包装在数组中传递
+        // 修复：在调用 getAddressByCoords 之前，先调用 updateLocation
+        window.mapManager.updateLocation(lng, lat);
         window.mapManager.getAddressByCoords([lng, lat], true, name);
         window.mapManager.map.setCenter([lng, lat]);
         window.mapManager.hasUserSelectedLocation = true;
