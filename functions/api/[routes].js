@@ -288,20 +288,44 @@ async function handleSubmitLocation(context, session) {
     const requestData = await request.json();
     console.log('收到的表单数据:', JSON.stringify(requestData, null, 2));
 
+    // 提取所有相关数据，包括确认数据
+    const {
+      'form-lng': formLng,
+      'form-lat': formLat,
+      longitude: reqLongitude,
+      latitude: reqLatitude,
+      'form-clock-coordinates': formClockCoordinates,
+      'form-address': formAddress,
+      'form-clock-address': formClockAddress,
+      address: reqAddress,
+      'form-province-code': formProvinceCode,
+      CLOCK_PROVINCE_CODE: reqProvinceCode,
+      'form-province-short': formProvinceShort,
+      CLOCK_PROVINCE_SHORT: reqProvinceShort,
+      'form-city-code': formCityCode,
+      CLOCK_CITY_CODE: reqCityCode,
+      'form-city-name': formCityName,
+      CLOCK_CITY_NAME: reqCityName,
+      realName,
+      confirmed,
+      confirmData,
+      type: requestType // 'checkin' or 'confirm'
+    } = requestData;
+
     // 从表单数据中提取坐标信息
-    const longitude = parseFloat(requestData['form-lng'] || requestData.longitude);
-    const latitude = parseFloat(requestData['form-lat'] || requestData.latitude);
+    const longitude = parseFloat(formLng || reqLongitude);
+    const latitude = parseFloat(formLat || reqLatitude);
     
     // 构建符合n8n期望格式的数据
     const currentDate = new Date().toISOString().split('T')[0]; // 格式: 2025-07-11
-    const coordinates = requestData['form-clock-coordinates'] || `${longitude},${latitude}`;
+    const coordinates = formClockCoordinates || `${longitude},${latitude}`;
 
     // 获取地址信息
-    let address = requestData['form-address'] || requestData['form-clock-address'] || requestData.address || '位置信息获取中...';
-    let provinceCode = requestData['form-province-code'] || requestData.CLOCK_PROVINCE_CODE || '';
-    let provinceShort = requestData['form-province-short'] || requestData.CLOCK_PROVINCE_SHORT || '';
-    let cityCode = requestData['form-city-code'] || requestData.CLOCK_CITY_CODE || '';
-    let cityName = requestData['form-city-name'] || requestData.CLOCK_CITY_NAME || '';
+    let address = formAddress || formClockAddress || reqAddress || '位置信息获取中...';
+    let provinceCode = formProvinceCode || reqProvinceCode || '';
+    let provinceShort = formProvinceShort || reqProvinceShort || '';
+    let cityCode = formCityCode || reqCityCode || '';
+    let cityName = formCityName || reqCityName || '';
 
     // 如果表单数据中已经包含了所有必要信息，则不需要再调用高德地图API
     const hasCompleteAddressInfo = address && provinceCode && provinceShort && cityCode && cityName;
@@ -421,11 +445,11 @@ async function handleSubmitLocation(context, session) {
 
     // 构建符合n8n期望的数据格式
     let data = {
-      name: requestData.realName || session?.user?.name || '未知用户',
+      name: realName || session?.user?.name || '未知用户',
       longitude: longitude.toString(),
       latitude: latitude.toString(),
       address: address,
-      type: "check-in",
+      type: requestType, // 使用从请求中获取的 type
       timestamp: currentDate,
       CLOCK_COORDINATES: coordinates,
       CLOCK_ADDRESS: address,
@@ -443,10 +467,10 @@ async function handleSubmitLocation(context, session) {
     let n8nEndpoint = env.N8N_API_ENDPOINT;
 
     // 如果是确认打卡模式，使用确认打卡API端点
-    if (requestData.confirmed === true && requestData.confirmData) {
+    if (confirmed === true && confirmData) {
       n8nEndpoint = env.N8N_API_CONFIRM_ENDPOINT;
       // 将确认数据合并到请求中
-      data = { ...data, ...requestData.confirmData };
+      data = { ...data, ...confirmData };
     }
 
     // 生成JWT令牌用于认证

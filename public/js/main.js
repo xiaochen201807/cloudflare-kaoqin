@@ -624,7 +624,7 @@ class MainApp {
                 const formData = {
                     realName: realName.trim(),
                     ...locationData,
-                    type: 'checkin',
+                    type: 'confirm', // 修复：将类型更改为 'confirm'
                     timestamp: new Date().toISOString(),
                     // 添加确认信息
                     confirmed: true,
@@ -871,16 +871,30 @@ window.selectHistoryLocation = function(lng, lat, name) {
 
 window.selectFavoriteLocation = function(lng, lat, name) {
     if (window.mapManager) {
-        window.mapManager.updateLocation(lng, lat);
-        window.mapManager.map.setCenter([lng, lat]);
-        window.mapManager.updateLocationInfo(name, lng, lat);
-        // 设置用户已选择位置标志
-        window.mapManager.hasUserSelectedLocation = true;
-        console.log('用户从收藏选择了位置，已设置标志位');
-        // 更新表单验证状态，启用提交按钮
-        if (window.mainApp) {
-            window.mainApp.validateForm();
-        }
+        // 直接调用逆地理编码，确保获取完整地址信息
+        window.mapManager.getAddressByCoords(lng, lat, (status, result) => {
+            if (status === 'complete' && result.info === 'OK') {
+                // 使用API返回的详细地址更新UI
+                window.mapManager.updateLocationInfo(
+                    result.regeocode.formattedAddress, 
+                    lng, 
+                    lat, 
+                    result.regeocode.addressComponent
+                );
+            } else {
+                // 如果逆地理编码失败，回退到基本信息
+                window.mapManager.updateLocationInfo(name, lng, lat);
+            }
+            // 移动地图中心
+            window.mapManager.map.setCenter([lng, lat]);
+            // 设置用户已选择位置标志
+            window.mapManager.hasUserSelectedLocation = true;
+            console.log('用户从收藏选择了位置，已设置标志位');
+            // 更新表单验证状态，启用提交按钮
+            if (window.mainApp) {
+                window.mainApp.validateForm();
+            }
+        });
     }
 };
 
