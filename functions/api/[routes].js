@@ -461,17 +461,16 @@ async function handleSubmitLocation(context, session) {
       username: session?.user?.login || 'unknown'
     };
 
-    console.log('最终提交给n8n的数据:', JSON.stringify(data, null, 2));
-
     // 选择合适的API端点
     let n8nEndpoint = env.N8N_API_ENDPOINT;
 
     // 如果是确认打卡模式，使用确认打卡API端点
-    if (confirmed === true && confirmData) {
+    if (confirmed === true) {
       n8nEndpoint = env.N8N_API_CONFIRM_ENDPOINT;
-      // 将确认数据合并到请求中
-      data = { ...data, ...confirmData };
+      data.confirmed = true;
     }
+
+    console.log('最终提交给n8n的数据:', JSON.stringify(data, null, 2));
 
     // 生成JWT令牌用于认证
     const jwtAlgorithm = env.JWT_ALGORITHM || "HS256";
